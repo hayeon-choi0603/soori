@@ -29,13 +29,46 @@
     </div>
   </div>
 
+  <!-- 강경도 선택 화면 -->
+  <div id="profile-screen" style="display:none">
+    <div class="profile-inner">
+      <div class="matching-label">매칭 준비</div>
+      <div class="profile-name-row">
+        <div id="profile-celeb-name" class="celeb-badge"></div>
+        <span id="profile-side-badge" class="side-badge"></span>
+      </div>
+      <p class="profile-copy">
+        먼저 본인의 강경도를 골라주세요. 반대 진영이면서 강경도가 다른 상대와 자동으로 매칭됩니다.
+      </p>
+      <div class="stance-grid">
+        <button class="stance-option" data-stance="hard" type="button">
+          <span class="stance-name">강경</span>
+          <span class="stance-desc">입장이 분명하고 쉽게 바뀌지 않음</span>
+        </button>
+        <button class="stance-option" data-stance="middle" type="button">
+          <span class="stance-name">중간</span>
+          <span class="stance-desc">의견은 있지만 대화를 통해 조정 가능</span>
+        </button>
+        <button class="stance-option" data-stance="soft" type="button">
+          <span class="stance-name">유연</span>
+          <span class="stance-desc">상대 논리를 들으며 빠르게 수용 가능</span>
+        </button>
+      </div>
+      <button id="start-matching-btn" class="btn-primary" type="button" disabled>강경도 저장하고 매칭 시작</button>
+    </div>
+  </div>
+
   <!-- 매칭 화면 -->
   <div id="matching-screen" style="display:none">
     <div class="matching-inner">
       <div class="matching-pulse"></div>
       <div class="matching-label">상대를 찾는 중</div>
       <div id="my-celeb-name" class="celeb-badge"></div>
-      <div class="matching-sub">같은 시간에 접속한 반대 측 참여자와 연결됩니다</div>
+      <div class="matching-profile">
+        <span id="matching-side-badge" class="side-badge"></span>
+        <span id="matching-stance-badge" class="stance-badge"></span>
+      </div>
+      <div class="matching-sub">같은 시간에 접속한 반대 측 참여자 중, 강경도가 다른 사람과 연결됩니다</div>
     </div>
   </div>
 
@@ -46,6 +79,7 @@
         <div class="identity-block">
           <span id="nickname" class="nickname"></span>
           <span id="side-badge" class="side-badge"></span>
+          <span id="stance-badge" class="stance-badge"></span>
         </div>
       </div>
       <div class="header-right">
@@ -63,6 +97,7 @@
       <div class="match-info">
         <span class="match-vs">VS</span>
         <span id="opponent-name" class="opponent-name"></span>
+        <span id="opponent-stance" class="match-stance"></span>
       </div>
     </div>
 
@@ -99,6 +134,7 @@
       </div>
       <div class="modal-side-info">
         <span id="modal-side-badge" class="side-badge"></span>
+        <span id="modal-stance-badge" class="stance-badge"></span>
         <span id="modal-nickname" class="modal-nick"></span> 으로 제출됩니다
       </div>
       <textarea id="opinion-input" placeholder="이 주제에 대한 의견을 자유롭게 작성하세요..." rows="7"></textarea>
