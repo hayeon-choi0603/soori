@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>설득왕 💘</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- 상태 메시지 (플랫폼 미접속 / 토론 대기) -->
+  <div id="message" class="message" style="display:none"></div>
+
+  <!-- 메인 앱 -->
+  <div id="app" style="display:none">
+
+    <!-- ── 왼쪽 사이드바 ── -->
+    <div class="sidebar">
+      <div class="sb-logo">설득<span class="pk">왕</span> 💘</div>
+
+      <!-- 내 정보 -->
+      <div class="sb-user">
+        <div class="sb-av" id="sbAv"></div>
+        <div>
+          <div class="sb-uname" id="sbName">-</div>
+          <div class="sb-ustance" id="sbStance">-</div>
+        </div>
+      </div>
+
+      <!-- 탭 내비 -->
+      <div class="sb-nav">
+        <button class="snav on" id="nav-home" onclick="switchTab('home')">
+          <span class="snav-ic">🏠</span>홈
+        </button>
+        <button class="snav" id="nav-mychats" onclick="switchTab('mychats')">
+          <span class="snav-ic">💌</span>내 대화
+        </button>
+      </div>
+
+      <!-- 실시간 참여자 -->
+      <div class="sb-sec">
+        <div class="sb-sec-title"><div class="live-dot"></div>실시간 참여자</div>
+        <div class="live-list" id="liveList"></div>
+      </div>
+
+      <!-- 랭킹 -->
+      <div class="sb-sec" style="margin-top:auto">
+        <div class="sb-sec-title">🏆 설득왕 랭킹</div>
+        <div class="rank-list" id="rankList"></div>
+      </div>
+    </div>
+
+    <!-- ── 중앙 피드 ── -->
+    <div class="arena">
+
+      <!-- 논제 헤더 -->
+      <div class="arena-header">
+        <div class="ah-topic" id="debate-title"></div>
+        <div class="ah-bottom">
+          <div class="ah-tag"><div class="ah-pulse"></div>설득왕 · 실시간 토론</div>
+          <div class="ah-pills">
+            <div class="dist-pill dp-pro" id="proCnt">🔵 찬성 -명</div>
+            <div class="dist-pill dp-con" id="conCnt">🔴 반대 -명</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 찬성 / 반대 컬럼 헤더 -->
+      <div class="col-headers">
+        <div class="col-hdr pro">
+          <div class="ch-dot pro"></div>찬성 주장
+          <div class="ch-cnt pro" id="proCount">0</div>
+        </div>
+        <div class="col-hdr con">
+          <div class="ch-dot con"></div>반대 주장
+          <div class="ch-cnt con" id="conCount">0</div>
+        </div>
+      </div>
+
+      <!-- 두 컬럼 피드 (홈) -->
+      <div class="two-col" id="homeView">
+        <div class="col pro-col" id="proFeed"></div>
+        <div class="col con-col" id="conFeed"></div>
+      </div>
+
+      <!-- 내 대화 뷰 -->
+      <div id="mychats-view"></div>
+
+    </div>
+
+    <!-- ── 오른쪽 패널 ── -->
+    <div class="rpanel">
+      <div class="rp-tabs">
+        <button class="rpt on" id="rpt-write" onclick="switchRTab('write')">✍️ 주장</button>
+        <button class="rpt" id="rpt-watch" onclick="switchRTab('watch')">👀 관전</button>
+      </div>
+
+      <!-- 주장 쓰기 -->
+      <div class="rp-body" id="rp-write">
+        <div class="write-wrap">
+          <div class="wp-user">
+            <div class="wp-av" id="wpAv"></div>
+            <div>
+              <div class="wp-name" id="wpName">-</div>
+              <div class="wp-stance" id="wpStance">-</div>
+            </div>
+            <div class="wp-lock">고정 🔒</div>
+          </div>
+          <div class="fc">
+            <div class="fc-label">핵심 주장 <span id="cc1" style="font-weight:400">0/20자</span></div>
+            <div class="fc-hint">✏️ <span class="q">한 줄로?</span> 20자 이내!</div>
+            <input class="fi" id="claimInput" type="text" placeholder="예: 통근 없애면 2시간이 생겨요" maxlength="20"
+              oninput="onClaimKey(this)">
+            <div class="cw" id="cw1"></div>
+          </div>
+          <div class="fc">
+            <div class="fc-label">근거 <span id="cc2" style="font-weight:400">0/300자</span></div>
+            <div class="fc-hint">📎 <span class="q">왜 그렇게 생각해요?</span> 해요체로!</div>
+            <textarea class="fi" id="evInput" style="min-height:80px"
+              placeholder="저는 재택근무를 하면서 통근 시간이 없어지니..." maxlength="300"
+              oninput="onEvKey(this)"></textarea>
+            <div class="cw" id="cw2"></div>
+          </div>
+          <button class="submit-btn" id="submitBtn" onclick="submitClaim()">주장 올리기 💘</button>
+        </div>
+      </div>
+
+      <!-- 관전 -->
+      <div class="rp-body" id="rp-watch" style="display:none">
+        <div class="sec-title">👀 공개 대화 관전</div>
+        <div id="watchPanel"></div>
+      </div>
+    </div>
+
+  </div><!-- /#app -->
+
+  <!-- ── 채팅 모달 ── -->
+  <div class="modal-overlay" id="chatModal" onclick="onModalBgClick(event)">
+    <div class="chat-modal">
+      <div class="cm-photo" id="cmPhoto">
+        <div class="cm-photo-bg" id="cmPhotoBg"></div>
+        <div class="cm-photo-img" id="cmPhotoImg"></div>
+        <div class="cm-photo-em" id="cmPhotoEm">🌊</div>
+        <div class="cm-photo-grad" id="cmPhotoGrad"></div>
+        <div class="cm-photo-info">
+          <div>
+            <div class="cm-pname" id="cmName">-</div>
+            <div class="cm-psub" id="cmSub">-</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:7px">
+            <div class="cm-badge" id="cmBadge">💬 1:1 대화</div>
+            <button class="cm-close-btn" onclick="closeChat()">✕</button>
+          </div>
+        </div>
+      </div>
+      <div class="cm-msgs" id="cmMsgs"></div>
+      <div class="cm-eval" id="cmEval">
+        <div class="cm-eq">💬 대화 후 입장이 바뀌었나요?</div>
+        <div class="cm-er">
+          <button class="eopt" onclick="closeChat()">🙅 아직이요</button>
+          <button class="eopt" onclick="closeChat()">🤔 조금요</button>
+          <button class="eopt yes" onclick="markConvinced()">💗 설득됐어요!</button>
+        </div>
+      </div>
+      <div class="cm-bar" id="cmBar">
+        <input class="cm-inp" id="cmInp" placeholder="반론 또는 질문을 써요... (익명 🔒)" autocomplete="off">
+        <button class="cm-send" onclick="sendChatMsg()">↑</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 설득됨 모달 ── -->
+  <div class="modal-overlay" id="convModal" onclick="if(event.target===this)this.classList.remove('open')">
+    <div class="conv-modal">
+      <span class="cv-em">🌟</span>
+      <div class="cv-q">설득됐나요?</div>
+      <div class="cv-sub">반대 쪽 논리가 더 설득력 있었군요!
+좋아요가 설득왕 점수로 이어져요.</div>
+      <div class="cv-btns">
+        <button class="cv-btn hot" onclick="document.getElementById('convModal').classList.remove('open');closeChat()">✅ 확인했어요!</button>
+        <button class="cv-btn ghost" onclick="document.getElementById('convModal').classList.remove('open')">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 알림 토스트 ── -->
+  <div class="toast" id="toast" onclick="openToastChat()">
+    <div class="t-av" id="tAv"></div>
+    <div style="flex:1">
+      <div class="t-name" id="tName">-</div>
+      <div class="t-msg">탭해서 바로 대화 시작 →</div>
+    </div>
+    <div class="t-heart">💗</div>
+  </div>
+
+  <!-- ── 참여 토스트 ── -->
+  <div class="join-toast" id="joinToast">
+    <div class="jt-dot"></div>
+    <span class="jt-text" id="joinText">-</span>
+  </div>
+
+  <!-- debate-core.js: 절대 수정 금지 -->
+  <script src="https://debate-md2-2603.web.app/debate-core.js" data-architect-id="soori"></script>
+  <script src="app.js"></script>
+
+</body>
+</html>
