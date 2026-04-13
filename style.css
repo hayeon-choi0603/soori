@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700;900&family=DM+Mono:wght@400;500&display=swap');
 
-/* ── 리셋 & 변수 ── */
+/* ���� 由ъ뀑 & 蹂��� ���� */
 *, *::before, *::after {
   margin: 0;
   padding: 0;
@@ -8,18 +8,18 @@
 }
 
 :root {
-  --bg: #0e0e0e;
-  --surface: #161616;
-  --border: #2a2a2a;
-  --border-light: #1e1e1e;
-  --text: #e8e4dc;
-  --text-muted: #666;
-  --text-dim: #444;
-  --pro: #4fc3a1;
-  --pro-bg: rgba(79, 195, 161, 0.08);
-  --con: #e05c6a;
-  --con-bg: rgba(224, 92, 106, 0.08);
-  --accent: #c9a84c;
+  --bg: #f9f7f4;
+  --surface: #ffffff;
+  --border: #e0dcd6;
+  --border-light: #ede9e3;
+  --text: #1a1713;
+  --text-muted: #888;
+  --text-dim: #bbb;
+  --pro: #1a7a5e;
+  --pro-bg: rgba(26, 122, 94, 0.07);
+  --con: #b83040;
+  --con-bg: rgba(184, 48, 64, 0.07);
+  --accent: #a07830;
   --font-serif: 'Noto Serif KR', 'Georgia', serif;
   --font-mono: 'DM Mono', 'Courier New', monospace;
 }
@@ -31,7 +31,7 @@ body {
   min-height: 100vh;
 }
 
-/* ── 상태 메시지 ── */
+/* ���� �곹깭 硫붿떆吏� ���� */
 .message {
   display: flex;
   align-items: center;
@@ -58,7 +58,7 @@ body {
   letter-spacing: 0.02em;
 }
 
-/* ── 대기 화면 ── */
+/* ���� ��湲� �붾㈃ ���� */
 #waiting-screen {
   display: flex;
   align-items: center;
@@ -97,7 +97,7 @@ body {
   line-height: 1.6;
 }
 
-/* ── 매칭 화면 ── */
+/* ���� 留ㅼ묶 �붾㈃ ���� */
 #matching-screen {
   display: flex;
   align-items: center;
@@ -168,7 +168,7 @@ body {
   max-width: 260px;
 }
 
-/* ── 헤더 ── */
+/* ���� �ㅻ뜑 ���� */
 header {
   display: flex;
   align-items: center;
@@ -220,7 +220,7 @@ header {
   border: 1px solid rgba(224,92,106,0.2);
 }
 
-/* ── 타이머 ── */
+/* ���� ���대㉧ ���� */
 .timer-block {
   display: flex;
   align-items: center;
@@ -241,7 +241,7 @@ header {
   min-width: 3rem;
 }
 
-/* ── 주제바 ── */
+/* ���� 二쇱젣諛� ���� */
 .topic-bar {
   padding: 2rem 1.5rem 1.75rem;
   background: var(--surface);
@@ -289,7 +289,7 @@ header {
   font-weight: 600;
 }
 
-/* ── 메인 컬럼 ── */
+/* ���� 硫붿씤 而щ읆 ���� */
 main {
   max-width: 960px;
   margin: 0 auto;
@@ -336,7 +336,7 @@ main {
 .col-dot.pro-dot { background: var(--pro); }
 .col-dot.con-dot { background: var(--con); }
 
-/* ── 의견 카드 ── */
+/* ���� �섍껄 移대뱶 ���� */
 .opinions-list {
   display: flex;
   flex-direction: column;
@@ -383,13 +383,13 @@ main {
   color: var(--text);
 }
 
-/* ── 종료 배너 ── */
+/* ���� 醫낅즺 諛곕꼫 ���� */
 .ended-banner {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  background: #1a0a0a;
+  background: #fff0f1;
   border-top: 1px solid var(--con);
   color: var(--con);
   font-family: var(--font-mono);
@@ -400,7 +400,7 @@ main {
   z-index: 80;
 }
 
-/* ── 버튼 ── */
+/* ���� 踰꾪듉 ���� */
 .btn-primary {
   padding: 0.55rem 1.25rem;
   background: var(--accent);
@@ -430,7 +430,7 @@ main {
   transform: none;
 }
 
-/* ── 모달 ── */
+/* ���� 紐⑤떖 ���� */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -498,13 +498,13 @@ main {
   justify-content: flex-end;
 }
 
-/* ── 텍스트 입력 ── */
+/* ���� �띿뒪�� �낅젰 ���� */
 textarea {
   width: 100%;
   padding: 0.75rem 1rem;
   border: 1px solid var(--border);
   border-radius: 4px;
-  background: var(--bg);
+  background: var(--surface);
   color: var(--text);
   font-family: var(--font-serif);
   font-size: 0.88rem;
@@ -522,13 +522,13 @@ textarea:focus {
   border-color: var(--accent);
 }
 
-/* ── 애니메이션 ── */
+/* ���� �좊땲硫붿씠�� ���� */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ── 반응형 ── */
+/* ���� 諛섏쓳�� ���� */
 @media (max-width: 600px) {
   .columns {
     grid-template-columns: 1fr;
