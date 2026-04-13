@@ -2,181 +2,151 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <title>토론</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
   <!-- 상태 메시지 -->
-  <div id="message" class="message" style="display:none">
-    <div class="message-inner">
-      <div class="message-icon">⬡</div>
-      <p id="message-text"></p>
+  <div id="message" class="fullscreen" style="display:none">
+    <div class="center-box">
+      <p id="message-text" class="msg-text"></p>
     </div>
   </div>
 
-  <!-- 시간 대기 화면 -->
-  <div id="waiting-screen" style="display:none">
-    <div class="waiting-inner">
-      <div class="waiting-label">토론 시작까지</div>
-      <div id="countdown-display" class="countdown-display">--:--:--</div>
-      <div class="waiting-sub">오늘 오후 9시가 되면 자동으로 입장됩니다</div>
+  <!-- 대기 화면 -->
+  <div id="waiting-screen" class="fullscreen" style="display:none">
+    <div class="center-box">
+      <div class="wait-icon">🕐</div>
+      <div class="wait-label">토론 시작까지</div>
+      <div id="countdown-display" class="countdown">--:--:--</div>
+      <div class="wait-sub">오늘 밤 9시에 시작됩니다</div>
     </div>
   </div>
 
-  <!-- STEP 1: 찬반 선택 -->
-  <div id="side-screen" style="display:none">
-    <div class="side-inner">
-      <div class="step-eyebrow">오늘의 토론 주제</div>
-      <h2 id="side-title" class="topic-heading"></h2>
-      <p class="step-sub">이 주제에 대한 입장을 선택하세요</p>
-      <div class="side-btns">
-        <button class="side-btn" data-side="pro">
-          <span class="side-btn-icon">◎</span>
-          <span class="side-btn-label">찬성</span>
-          <span class="side-btn-desc">이 주제에 동의합니다</span>
-        </button>
-        <button class="side-btn" data-side="con">
-          <span class="side-btn-icon">◎</span>
-          <span class="side-btn-label">반대</span>
-          <span class="side-btn-desc">이 주제에 동의하지 않습니다</span>
-        </button>
+  <!-- STEP 1: 찬반 카드 스와이프 -->
+  <div id="side-screen" class="fullscreen" style="display:none">
+    <div class="side-top">
+      <div class="app-logo">💬 토론</div>
+      <div class="topic-pill">오늘의 주제</div>
+      <h2 id="side-topic" class="side-topic"></h2>
+    </div>
+
+    <div class="card-stack-area">
+      <div class="debate-card" id="debate-card">
+        <div class="card-gradient"></div>
+        <div class="card-content">
+          <div class="card-topic-label">이 주제에 대해</div>
+          <div class="card-topic-text" id="card-topic-text"></div>
+          <div class="card-question">당신의 입장은?</div>
+        </div>
+        <!-- 스와이프 힌트 오버레이 -->
+        <div class="swipe-hint-left" id="hint-left">반대 👎</div>
+        <div class="swipe-hint-right" id="hint-right">찬성 👍</div>
       </div>
+    </div>
+
+    <div class="action-btns">
+      <button class="action-btn con-btn" id="con-btn">
+        <span class="action-icon">✕</span>
+        <span class="action-label">반대</span>
+      </button>
+      <button class="action-btn pro-btn" id="pro-btn">
+        <span class="action-icon">♥</span>
+        <span class="action-label">찬성</span>
+      </button>
     </div>
   </div>
 
-  <!-- STEP 2: 강경도 선택 (매칭 대기 화면) -->
-  <div id="matching-screen" style="display:none">
-    <div class="matching-inner">
+  <!-- STEP 2: 강경도 선택 (매칭 대기) -->
+  <div id="matching-screen" class="fullscreen" style="display:none">
+    <div class="matching-header">
+      <div class="matching-avatar" id="matching-avatar"></div>
+      <div class="matching-name" id="matching-celeb-name"></div>
+      <div class="matching-side-badge" id="matching-side-badge"></div>
+    </div>
 
-      <div class="matching-top">
-        <div class="matching-celeb-row">
-          <span id="my-celeb-name" class="celeb-badge"></span>
-          <span id="my-side-badge" class="side-badge"></span>
-        </div>
-        <div class="matching-title-row">상대를 찾고 있습니다</div>
-      </div>
-
-      <div class="intensity-section">
-        <div class="intensity-label">강경도를 선택하면 매칭이 시작됩니다</div>
-        <div class="intensity-btns">
-          <button class="intensity-btn" data-intensity="1">
-            <span class="intensity-num">1</span>
-            <span class="intensity-name">매우<br>온건</span>
-          </button>
-          <button class="intensity-btn" data-intensity="2">
-            <span class="intensity-num">2</span>
-            <span class="intensity-name">온건</span>
-          </button>
-          <button class="intensity-btn" data-intensity="3">
-            <span class="intensity-num">3</span>
-            <span class="intensity-name">중립</span>
-          </button>
-          <button class="intensity-btn" data-intensity="4">
-            <span class="intensity-num">4</span>
-            <span class="intensity-name">강경</span>
-          </button>
-          <button class="intensity-btn" data-intensity="5">
-            <span class="intensity-num">5</span>
-            <span class="intensity-name">매우<br>강경</span>
-          </button>
+    <div class="intensity-card">
+      <div class="intensity-card-title">강경도를 선택하면<br>매칭이 시작됩니다</div>
+      <div class="intensity-slider-area">
+        <div class="intensity-row">
+          <button class="i-btn" data-intensity="1"><span class="i-num">1</span><span class="i-name">매우 온건</span></button>
+          <button class="i-btn" data-intensity="2"><span class="i-num">2</span><span class="i-name">온건</span></button>
+          <button class="i-btn" data-intensity="3"><span class="i-num">3</span><span class="i-name">중립</span></button>
+          <button class="i-btn" data-intensity="4"><span class="i-num">4</span><span class="i-name">강경</span></button>
+          <button class="i-btn" data-intensity="5"><span class="i-num">5</span><span class="i-name">매우 강경</span></button>
         </div>
       </div>
+    </div>
 
-      <!-- 강경도 선택 후 상태 -->
-      <div id="matching-searching" style="display:none">
-        <div class="searching-row">
-          <div class="searching-pulse"></div>
-          <div class="searching-texts">
-            <div id="searching-stance" class="searching-stance"></div>
-            <div class="searching-desc">강경도 차이가 가장 큰 상대와 연결 중...</div>
-          </div>
-        </div>
+    <div id="searching-status" class="searching-status" style="display:none">
+      <div class="searching-dot-row">
+        <span class="sdot"></span><span class="sdot"></span><span class="sdot"></span>
       </div>
-
+      <div id="searching-text" class="searching-text"></div>
     </div>
   </div>
 
-  <!-- 메인 토론 앱 -->
-  <div id="app" style="display:none">
-    <header>
-      <div class="header-left">
-        <div class="identity-block">
-          <span id="nickname" class="nickname"></span>
-          <span id="side-badge" class="side-badge"></span>
-          <span id="intensity-badge" class="intensity-badge"></span>
-        </div>
+  <!-- STEP 3: 매칭 완료 애니메이션 -->
+  <div id="match-found-screen" class="fullscreen" style="display:none">
+    <div class="match-found-inner">
+      <div class="match-found-hearts">💬</div>
+      <div class="match-found-title">매칭 완료!</div>
+      <div class="match-found-sub" id="match-found-sub"></div>
+      <div class="match-avatars">
+        <div class="match-av" id="av-me"></div>
+        <div class="match-av-vs">VS</div>
+        <div class="match-av" id="av-opp"></div>
       </div>
-      <div class="header-right">
-        <div class="timer-block">
-          <span class="timer-label">종료까지</span>
-          <span id="timer-display" class="timer-display">--:--</span>
-        </div>
-        <button id="open-modal-btn" class="btn-primary" style="display:none">의견 작성</button>
-      </div>
-    </header>
+      <button class="btn-start-chat" id="start-chat-btn">대화 시작하기 →</button>
+    </div>
+  </div>
 
-    <div class="topic-bar">
-      <div class="topic-eyebrow">오늘의 토론 주제</div>
-      <h1 id="debate-title" class="debate-title"></h1>
-      <div class="match-info">
-        <span id="my-match-label" class="my-match-label"></span>
-        <span class="match-vs">VS</span>
-        <span id="opponent-name" class="opponent-name"></span>
-        <span id="opponent-stance-badge" class="opponent-stance-badge"></span>
+  <!-- STEP 4: 채팅 화면 -->
+  <div id="chat-screen" style="display:none">
+    <div class="chat-header">
+      <div class="chat-header-info">
+        <div class="chat-opp-avatar" id="chat-opp-avatar"></div>
+        <div class="chat-opp-info">
+          <div class="chat-opp-name" id="chat-opp-name"></div>
+          <div class="chat-opp-stance" id="chat-opp-stance"></div>
+        </div>
+      </div>
+      <div class="chat-header-right">
+        <div class="chat-timer">
+          <span class="chat-timer-label">종료</span>
+          <span id="chat-timer" class="chat-timer-val">--:--</span>
+        </div>
       </div>
     </div>
 
-    <main>
-      <div class="columns">
-        <div class="column pro-col">
-          <div class="col-header"><span class="col-dot pro-dot"></span>찬성</div>
-          <div id="pro-list" class="opinions-list"></div>
-        </div>
-        <div class="divider"></div>
-        <div class="column con-col">
-          <div class="col-header"><span class="col-dot con-dot"></span>반대</div>
-          <div id="con-list" class="opinions-list"></div>
-        </div>
-      </div>
-    </main>
+    <div class="chat-topic-bar">
+      <span class="chat-topic-label">주제</span>
+      <span id="chat-topic-text" class="chat-topic-text"></span>
+    </div>
 
-    <div id="ended-banner" class="ended-banner" style="display:none">
-      토론이 종료되었습니다. 더 이상 의견을 제출할 수 없습니다.
+    <div id="chat-messages" class="chat-messages"></div>
+
+    <div id="chat-ended-bar" class="chat-ended-bar" style="display:none">
+      토론이 종료되었습니다
+    </div>
+
+    <div id="chat-input-area" class="chat-input-area">
+      <textarea id="chat-input" class="chat-input" placeholder="의견을 입력하세요..." rows="1"></textarea>
+      <button id="chat-send-btn" class="chat-send-btn">↑</button>
     </div>
   </div>
 
   <!-- 관찰자 화면 -->
   <div id="viewer-screen" style="display:none">
     <div class="viewer-header">
-      <div class="topic-eyebrow">전체 토론 열람</div>
-      <h1 id="viewer-title" class="debate-title"></h1>
+      <div class="viewer-title-label">전체 토론 보기</div>
+      <div id="viewer-title" class="viewer-title"></div>
     </div>
-    <div class="viewer-body">
-      <div id="viewer-matches"></div>
-    </div>
-  </div>
-
-  <!-- 의견 작성 모달 -->
-  <div id="modal-overlay" class="modal-overlay" style="display:none">
-    <div class="modal">
-      <div class="modal-header">
-        <h2>의견 제출</h2>
-        <button id="close-modal-btn" class="modal-close">×</button>
-      </div>
-      <div class="modal-side-info">
-        <span id="modal-side-badge" class="side-badge"></span>
-        <span id="modal-intensity-badge" class="intensity-badge"></span>
-        <span id="modal-nickname" class="modal-nick"></span>으로 제출됩니다
-      </div>
-      <textarea id="opinion-input" placeholder="이 주제에 대한 의견을 자유롭게 작성하세요..." rows="7"></textarea>
-      <div class="modal-footer">
-        <button id="submit-btn" class="btn-primary">제출하기</button>
-      </div>
-    </div>
+    <div id="viewer-matches" class="viewer-matches"></div>
   </div>
 
   <script src="https://debate-md2-2603.web.app/debate-core.js" data-architect-id="default"></script>
