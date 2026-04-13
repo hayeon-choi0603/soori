@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700;900&family=DM+Mono:wght@400;500&display=swap');
 
-/* ���� 由ъ뀑 & 蹂��� ���� */
+/* ── 리셋 & 변수 ── */
 *, *::before, *::after {
   margin: 0;
   padding: 0;
@@ -8,18 +8,18 @@
 }
 
 :root {
-  --bg: #f9f7f4;
-  --surface: #ffffff;
-  --border: #e0dcd6;
-  --border-light: #ede9e3;
-  --text: #1a1713;
-  --text-muted: #888;
-  --text-dim: #bbb;
-  --pro: #1a7a5e;
-  --pro-bg: rgba(26, 122, 94, 0.07);
-  --con: #b83040;
-  --con-bg: rgba(184, 48, 64, 0.07);
-  --accent: #a07830;
+  --bg: #0e0e0e;
+  --surface: #161616;
+  --border: #2a2a2a;
+  --border-light: #1e1e1e;
+  --text: #e8e4dc;
+  --text-muted: #666;
+  --text-dim: #444;
+  --pro: #4fc3a1;
+  --pro-bg: rgba(79, 195, 161, 0.08);
+  --con: #e05c6a;
+  --con-bg: rgba(224, 92, 106, 0.08);
+  --accent: #c9a84c;
   --font-serif: 'Noto Serif KR', 'Georgia', serif;
   --font-mono: 'DM Mono', 'Courier New', monospace;
 }
@@ -31,7 +31,7 @@ body {
   min-height: 100vh;
 }
 
-/* ���� �곹깭 硫붿떆吏� ���� */
+/* ── 상태 메시지 ── */
 .message {
   display: flex;
   align-items: center;
@@ -58,7 +58,7 @@ body {
   letter-spacing: 0.02em;
 }
 
-/* ���� ��湲� �붾㈃ ���� */
+/* ── 대기 화면 ── */
 #waiting-screen {
   display: flex;
   align-items: center;
@@ -97,7 +97,86 @@ body {
   line-height: 1.6;
 }
 
-/* ���� 留ㅼ묶 �붾㈃ ���� */
+/* ── 강경도 선택 화면 ── */
+#profile-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 2rem;
+}
+
+.profile-inner {
+  width: min(560px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 2rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  animation: fadeUp 0.6s ease both;
+}
+
+.profile-name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  flex-wrap: wrap;
+}
+
+.profile-copy {
+  font-size: 0.9rem;
+  line-height: 1.7;
+  color: var(--text-muted);
+}
+
+.stance-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.stance-option {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  transition: border-color 0.15s, transform 0.15s, background 0.15s;
+}
+
+.stance-option:hover {
+  border-color: rgba(201, 168, 76, 0.45);
+  transform: translateY(-1px);
+}
+
+.stance-option.is-selected {
+  border-color: var(--accent);
+  background: rgba(201, 168, 76, 0.08);
+}
+
+.stance-name {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.stance-desc {
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.profile-inner .btn-primary {
+  width: 100%;
+  margin-top: 0.25rem;
+}
+
+/* ── 매칭 화면 ── */
 #matching-screen {
   display: flex;
   align-items: center;
@@ -161,6 +240,14 @@ body {
   letter-spacing: -0.01em;
 }
 
+.matching-profile {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
 .matching-sub {
   font-size: 0.8rem;
   color: var(--text-muted);
@@ -168,7 +255,7 @@ body {
   max-width: 260px;
 }
 
-/* ���� �ㅻ뜑 ���� */
+/* ── 헤더 ── */
 header {
   display: flex;
   align-items: center;
@@ -220,7 +307,35 @@ header {
   border: 1px solid rgba(224,92,106,0.2);
 }
 
-/* ���� ���대㉧ ���� */
+.stance-badge {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 500;
+  padding: 0.2rem 0.55rem;
+  border-radius: 3px;
+  letter-spacing: 0.05em;
+  border: 1px solid transparent;
+}
+
+.stance-badge.hard {
+  background: rgba(224, 92, 106, 0.12);
+  color: #ff8c98;
+  border-color: rgba(224, 92, 106, 0.2);
+}
+
+.stance-badge.middle {
+  background: rgba(201, 168, 76, 0.12);
+  color: #d7bc72;
+  border-color: rgba(201, 168, 76, 0.22);
+}
+
+.stance-badge.soft {
+  background: rgba(79, 195, 161, 0.12);
+  color: #7ed8ba;
+  border-color: rgba(79, 195, 161, 0.2);
+}
+
+/* ── 타이머 ── */
 .timer-block {
   display: flex;
   align-items: center;
@@ -241,7 +356,7 @@ header {
   min-width: 3rem;
 }
 
-/* ���� 二쇱젣諛� ���� */
+/* ── 주제바 ── */
 .topic-bar {
   padding: 2rem 1.5rem 1.75rem;
   background: var(--surface);
@@ -289,7 +404,15 @@ header {
   font-weight: 600;
 }
 
-/* ���� 硫붿씤 而щ읆 ���� */
+.match-stance {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--accent);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ── 메인 컬럼 ── */
 main {
   max-width: 960px;
   margin: 0 auto;
@@ -336,7 +459,7 @@ main {
 .col-dot.pro-dot { background: var(--pro); }
 .col-dot.con-dot { background: var(--con); }
 
-/* ���� �섍껄 移대뱶 ���� */
+/* ── 의견 카드 ── */
 .opinions-list {
   display: flex;
   flex-direction: column;
@@ -383,13 +506,13 @@ main {
   color: var(--text);
 }
 
-/* ���� 醫낅즺 諛곕꼫 ���� */
+/* ── 종료 배너 ── */
 .ended-banner {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  background: #fff0f1;
+  background: #1a0a0a;
   border-top: 1px solid var(--con);
   color: var(--con);
   font-family: var(--font-mono);
@@ -400,7 +523,7 @@ main {
   z-index: 80;
 }
 
-/* ���� 踰꾪듉 ���� */
+/* ── 버튼 ── */
 .btn-primary {
   padding: 0.55rem 1.25rem;
   background: var(--accent);
@@ -430,7 +553,7 @@ main {
   transform: none;
 }
 
-/* ���� 紐⑤떖 ���� */
+/* ── 모달 ── */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -498,13 +621,13 @@ main {
   justify-content: flex-end;
 }
 
-/* ���� �띿뒪�� �낅젰 ���� */
+/* ── 텍스트 입력 ── */
 textarea {
   width: 100%;
   padding: 0.75rem 1rem;
   border: 1px solid var(--border);
   border-radius: 4px;
-  background: var(--surface);
+  background: var(--bg);
   color: var(--text);
   font-family: var(--font-serif);
   font-size: 0.88rem;
@@ -522,13 +645,13 @@ textarea:focus {
   border-color: var(--accent);
 }
 
-/* ���� �좊땲硫붿씠�� ���� */
+/* ── 애니메이션 ── */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ���� 諛섏쓳�� ���� */
+/* ── 반응형 ── */
 @media (max-width: 600px) {
   .columns {
     grid-template-columns: 1fr;
@@ -540,4 +663,8 @@ textarea:focus {
   .column { padding: 0; }
 
   main { padding: 1rem; }
+
+  .profile-inner {
+    padding: 1.4rem;
+  }
 }
