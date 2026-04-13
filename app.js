@@ -15,13 +15,13 @@
  */
 
 // ── 설정 ────────────────────────────────────────────────
-var DEBATE_START_HOUR = 18; // 18:00
-var DEBATE_END_HOUR = 19;   // 19:00
+var DEBATE_START_HOUR = 21; // 21:00
+var DEBATE_END_HOUR = 24;   // 24:00 (자정)
 // 토론 시간이 status === 'active'로 제어되면 그쪽을 우선합니다.
 // 위 상수는 데모 모드나 status가 active인 경우에도 클라이언트 측 마감으로 동작합니다.
 
 var CELEB_POOL = [
-  "아이유", "RM", "박서준", "손예진", "공유",
+  "아이유", "BTS RM", "박서준", "손예진", "공유",
   "김태리", "이준호", "수지", "현빈", "박보검",
   "전지현", "송강", "한소희", "차은우", "이영애",
   "김수현", "고윤정", "변우석", "정호연", "류준열",
@@ -51,12 +51,15 @@ function getCelebName(nickname) {
 // ── 시간 유틸 ────────────────────────────────────────────
 function getKSTHour() {
   var now = new Date();
-  // UTC+9
   return new Date(now.getTime() + 9 * 3600 * 1000).getUTCHours();
 }
 
 function isDebateOpen() {
   var h = getKSTHour();
+  // DEBATE_END_HOUR가 24(자정)인 경우 h < 24는 항상 true이므로 h >= 21이면 됨
+  if (DEBATE_END_HOUR >= 24) {
+    return h >= DEBATE_START_HOUR;
+  }
   return h >= DEBATE_START_HOUR && h < DEBATE_END_HOUR;
 }
 
@@ -77,7 +80,13 @@ function getNextDebateStart() {
 function getTodayDebateEnd() {
   var now = new Date();
   var kst = new Date(now.getTime() + 9 * 3600 * 1000);
-  kst.setUTCHours(DEBATE_END_HOUR, 0, 0, 0);
+  if (DEBATE_END_HOUR >= 24) {
+    // 자정 = 다음날 00:00 KST
+    kst.setUTCDate(kst.getUTCDate() + 1);
+    kst.setUTCHours(0, 0, 0, 0);
+  } else {
+    kst.setUTCHours(DEBATE_END_HOUR, 0, 0, 0);
+  }
   return new Date(kst.getTime() - 9 * 3600 * 1000);
 }
 
