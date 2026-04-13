@@ -1,27 +1,19 @@
 /**
  * 실시간 토론 — app.js
- * README 규칙 엄수:
- *  - debate-core.js 태그 유지
- *  - window.DebateCore.onReady 콜백 안에서 모든 로직
- *  - savePayload / onPayloadsChange 사용
- *  - Firebase 직접 접근 금지
+ * debate-core.js는 유지하고, payload만으로 매칭과 의견 저장을 처리합니다.
  *
- * 추가 기능:
- *  - 한국 연예인 닉네임 랜덤 배정 (URL 닉네임 → 연예인 이름 매핑)
- *  - 특정 시간(18:00~19:00)에만 토론 오픈
- *  - 실시간 1:1 매칭 (찬vs반)
- *  - 매칭된 쌍은 독립 채널로 대화
- *  - 토론 시간 종료 시 입력 불가
+ * 이번 버전 추가점:
+ *  - 플랫폼이 넘겨준 찬/반(side)을 유지
+ *  - 사용자가 강경도(강경/중간/유연)를 직접 선택
+ *  - 반대 진영이면서 강경도가 다른 상대와만 자동 매칭
+ *  - 매칭 경쟁 중 생긴 일시적인 엇갈림을 클라이언트에서 정리
  */
 
-// ── 설정 ────────────────────────────────────────────────
-var DEBATE_START_HOUR = 21; // 21:00
-var DEBATE_END_HOUR = 24;   // 24:00 (자정)
-// 토론 시간이 status === 'active'로 제어되면 그쪽을 우선합니다.
-// 위 상수는 데모 모드나 status가 active인 경우에도 클라이언트 측 마감으로 동작합니다.
+var DEBATE_START_HOUR = 18;
+var DEBATE_END_HOUR = 19;
 
 var CELEB_POOL = [
-  "아이유", "BTS RM", "박서준", "손예진", "공유",
+  "아이유", "RM", "박서준", "손예진", "공유",
   "김태리", "이준호", "수지", "현빈", "박보검",
   "전지현", "송강", "한소희", "차은우", "이영애",
   "김수현", "고윤정", "변우석", "정호연", "류준열",
@@ -29,18 +21,24 @@ var CELEB_POOL = [
   "주지훈", "이세영", "옹성우", "박지현", "남주혁"
 ];
 
-// ── 상태 ────────────────────────────────────────────────
-var allOpinions = [];
+var STANCE_OPTIONS = [
+  { key: "hard", label: "강경", score: 3 },
+  { key: "middle", label: "중간", score: 2 },
+  { key: "soft", label: "유연", score: 1 }
+];
+
 var myInfo = null;
-var myCelebName = null;
-var myMatchKey = null;   // "proNick:conNick" 형태의 매치 키
+var myCelebName = "";
+var myMatchKey = null;
+var currentPayloads = {};
+var selectedStance = "";
 var debateEndTime = null;
 var timerInterval = null;
 var countdownInterval = null;
+var modalSetup = false;
+var profileSetup = false;
 
-// ── 닉네임 → 연예인 매핑 (세션 내 일관성) ────────────────
 function getCelebName(nickname) {
-  // 닉네임 문자열을 시드로 하여 항상 같은 연예인 반환
   var hash = 0;
   for (var i = 0; i < nickname.length; i++) {
     hash = (hash * 31 + nickname.charCodeAt(i)) & 0xffffffff;
@@ -48,72 +46,150 @@ function getCelebName(nickname) {
   return CELEB_POOL[Math.abs(hash) % CELEB_POOL.length];
 }
 
-// ── 시간 유틸 ────────────────────────────────────────────
+function getKSTDate() {
+  return new Date(Date.now() + 9 * 3600 * 1000);
+}
+
 function getKSTHour() {
-  var now = new Date();
-  return new Date(now.getTime() + 9 * 3600 * 1000).getUTCHours();
+  return getKSTDate().getUTCHours();
+}
+
+function getSessionKey() {
+  var kst = getKSTDate();
+  return kst.getUTCFullYear() + "-" + pad(kst.getUTCMonth() + 1) + "-" + pad(kst.getUTCDate());
 }
 
 function isDebateOpen() {
-  var h = getKSTHour();
-  // DEBATE_END_HOUR가 24(자정)인 경우 h < 24는 항상 true이므로 h >= 21이면 됨
-  if (DEBATE_END_HOUR >= 24) {
-    return h >= DEBATE_START_HOUR;
-  }
-  return h >= DEBATE_START_HOUR && h < DEBATE_END_HOUR;
+  var hour = getKSTHour();
+  return hour >= DEBATE_START_HOUR && hour < DEBATE_END_HOUR;
 }
 
 function getNextDebateStart() {
-  var now = new Date();
-  var kst = new Date(now.getTime() + 9 * 3600 * 1000);
-  var h = kst.getUTCHours();
-  if (h < DEBATE_START_HOUR) {
+  var kst = getKSTDate();
+  var hour = kst.getUTCHours();
+
+  if (hour < DEBATE_START_HOUR) {
     kst.setUTCHours(DEBATE_START_HOUR, 0, 0, 0);
   } else {
-    // 내일
     kst.setUTCDate(kst.getUTCDate() + 1);
     kst.setUTCHours(DEBATE_START_HOUR, 0, 0, 0);
   }
-  return new Date(kst.getTime() - 9 * 3600 * 1000); // UTC로 변환
+
+  return new Date(kst.getTime() - 9 * 3600 * 1000);
 }
 
 function getTodayDebateEnd() {
-  var now = new Date();
-  var kst = new Date(now.getTime() + 9 * 3600 * 1000);
-  if (DEBATE_END_HOUR >= 24) {
-    // 자정 = 다음날 00:00 KST
-    kst.setUTCDate(kst.getUTCDate() + 1);
-    kst.setUTCHours(0, 0, 0, 0);
-  } else {
-    kst.setUTCHours(DEBATE_END_HOUR, 0, 0, 0);
-  }
+  var kst = getKSTDate();
+  kst.setUTCHours(DEBATE_END_HOUR, 0, 0, 0);
   return new Date(kst.getTime() - 9 * 3600 * 1000);
+}
+
+function pad(value) {
+  return value < 10 ? "0" + value : String(value);
 }
 
 function formatDuration(ms) {
   if (ms <= 0) return "00:00";
-  var totalSec = Math.floor(ms / 1000);
-  var min = Math.floor(totalSec / 60);
-  var sec = totalSec % 60;
-  return pad(min) + ":" + pad(sec);
+  var totalSeconds = Math.floor(ms / 1000);
+  var minutes = Math.floor(totalSeconds / 60);
+  var seconds = totalSeconds % 60;
+  return pad(minutes) + ":" + pad(seconds);
 }
 
 function formatCountdown(ms) {
   if (ms <= 0) return "00:00:00";
-  var totalSec = Math.floor(ms / 1000);
-  var h = Math.floor(totalSec / 3600);
-  var m = Math.floor((totalSec % 3600) / 60);
-  var s = totalSec % 60;
-  return pad(h) + ":" + pad(m) + ":" + pad(s);
+  var totalSeconds = Math.floor(ms / 1000);
+  var hours = Math.floor(totalSeconds / 3600);
+  var minutes = Math.floor((totalSeconds % 3600) / 60);
+  var seconds = totalSeconds % 60;
+  return pad(hours) + ":" + pad(minutes) + ":" + pad(seconds);
 }
 
-function pad(n) { return n < 10 ? "0" + n : "" + n; }
+function getStanceMeta(key) {
+  for (var i = 0; i < STANCE_OPTIONS.length; i++) {
+    if (STANCE_OPTIONS[i].key === key) {
+      return STANCE_OPTIONS[i];
+    }
+  }
+  return null;
+}
 
-// ── 화면 전환 ─────────────────────────────────────────────
+function getStanceScore(key) {
+  var meta = getStanceMeta(key);
+  return meta ? meta.score : 0;
+}
+
+function getSideLabel(side) {
+  return side === "pro" ? "찬성" : "반대";
+}
+
+function getCurrentPayload(payloads, nickname) {
+  var payload = payloads && payloads[nickname];
+  if (!payload || payload.sessionKey !== getSessionKey()) {
+    return null;
+  }
+  return payload;
+}
+
+function buildEmptyPayload(side) {
+  return {
+    sessionKey: getSessionKey(),
+    celebName: myCelebName,
+    side: side,
+    stance: null,
+    matchKey: null,
+    opinions: [],
+    joinedAt: Date.now()
+  };
+}
+
+function saveMergedPayload(info, currentPayload, updates) {
+  var base = currentPayload && currentPayload.sessionKey === getSessionKey()
+    ? currentPayload
+    : buildEmptyPayload(info.side);
+
+  var next = {
+    sessionKey: getSessionKey(),
+    celebName: Object.prototype.hasOwnProperty.call(updates, "celebName") ? updates.celebName : (base.celebName || myCelebName),
+    side: Object.prototype.hasOwnProperty.call(updates, "side") ? updates.side : (base.side || info.side),
+    stance: Object.prototype.hasOwnProperty.call(updates, "stance") ? updates.stance : (base.stance || null),
+    matchKey: Object.prototype.hasOwnProperty.call(updates, "matchKey") ? updates.matchKey : (base.matchKey || null),
+    opinions: Object.prototype.hasOwnProperty.call(updates, "opinions") ? updates.opinions : (base.opinions || []),
+    joinedAt: base.joinedAt || Date.now()
+  };
+
+  return info.savePayload(next);
+}
+
+function resetBadge(el, variants) {
+  if (!el) return;
+  variants.forEach(function (name) {
+    el.classList.remove(name);
+  });
+}
+
+function applySideBadge(el, side) {
+  if (!el) return;
+  resetBadge(el, ["pro", "con"]);
+  el.textContent = getSideLabel(side);
+  el.classList.add(side);
+}
+
+function applyStanceBadge(el, stance) {
+  if (!el) return;
+  var meta = getStanceMeta(stance);
+  resetBadge(el, ["hard", "middle", "soft"]);
+  el.textContent = meta ? meta.label : "강경도 선택 전";
+  if (meta) {
+    el.classList.add(meta.key);
+  }
+}
+
 function showMessage(text) {
   document.getElementById("message-text").textContent = text;
   document.getElementById("message").style.display = "flex";
   document.getElementById("waiting-screen").style.display = "none";
+  document.getElementById("profile-screen").style.display = "none";
   document.getElementById("matching-screen").style.display = "none";
   document.getElementById("app").style.display = "none";
 }
@@ -121,43 +197,86 @@ function showMessage(text) {
 function showWaiting() {
   document.getElementById("message").style.display = "none";
   document.getElementById("waiting-screen").style.display = "flex";
+  document.getElementById("profile-screen").style.display = "none";
   document.getElementById("matching-screen").style.display = "none";
   document.getElementById("app").style.display = "none";
 
-  // 카운트다운
-  if (countdownInterval) clearInterval(countdownInterval);
+  if (countdownInterval) {
+    clearInterval(countdownInterval);
+  }
+
   function tick() {
-    var target = getNextDebateStart();
-    var diff = target - Date.now();
+    var diff = getNextDebateStart() - Date.now();
     document.getElementById("countdown-display").textContent = formatCountdown(diff);
     if (diff <= 0) {
       clearInterval(countdownInterval);
       location.reload();
     }
   }
+
   tick();
   countdownInterval = setInterval(tick, 1000);
 }
 
-function showMatching(celebName) {
+function showProfileSelection(side, stance) {
   document.getElementById("message").style.display = "none";
   document.getElementById("waiting-screen").style.display = "none";
+  document.getElementById("profile-screen").style.display = "flex";
+  document.getElementById("matching-screen").style.display = "none";
+  document.getElementById("app").style.display = "none";
+
+  document.getElementById("profile-celeb-name").textContent = myCelebName;
+  applySideBadge(document.getElementById("profile-side-badge"), side);
+  updateStanceSelection(stance || "");
+}
+
+function showMatching(side, stance) {
+  document.getElementById("message").style.display = "none";
+  document.getElementById("waiting-screen").style.display = "none";
+  document.getElementById("profile-screen").style.display = "none";
   document.getElementById("matching-screen").style.display = "flex";
   document.getElementById("app").style.display = "none";
-  document.getElementById("my-celeb-name").textContent = celebName;
+
+  document.getElementById("my-celeb-name").textContent = myCelebName;
+  applySideBadge(document.getElementById("matching-side-badge"), side);
+  applyStanceBadge(document.getElementById("matching-stance-badge"), stance);
 }
 
 function showApp() {
   document.getElementById("message").style.display = "none";
   document.getElementById("waiting-screen").style.display = "none";
+  document.getElementById("profile-screen").style.display = "none";
   document.getElementById("matching-screen").style.display = "none";
   document.getElementById("app").style.display = "block";
 }
 
-// ── 타이머 ─────────────────────────────────────────────────
+function updateStanceSelection(stance) {
+  selectedStance = stance || "";
+
+  var buttons = document.querySelectorAll(".stance-option");
+  Array.prototype.forEach.call(buttons, function (button) {
+    var active = button.getAttribute("data-stance") === selectedStance;
+    button.classList.toggle("is-selected", active);
+  });
+
+  document.getElementById("start-matching-btn").disabled = !selectedStance;
+}
+
+function updateIdentity(payload) {
+  document.getElementById("nickname").textContent = myCelebName;
+  document.getElementById("modal-nickname").textContent = myCelebName;
+  applySideBadge(document.getElementById("side-badge"), payload.side || myInfo.side);
+  applySideBadge(document.getElementById("modal-side-badge"), payload.side || myInfo.side);
+  applyStanceBadge(document.getElementById("stance-badge"), payload.stance);
+  applyStanceBadge(document.getElementById("modal-stance-badge"), payload.stance);
+}
+
 function startTimer() {
   debateEndTime = getTodayDebateEnd();
-  if (timerInterval) clearInterval(timerInterval);
+
+  if (timerInterval) {
+    clearInterval(timerInterval);
+  }
 
   function tick() {
     var diff = debateEndTime - Date.now();
@@ -167,8 +286,10 @@ function startTimer() {
       endDebate();
       return;
     }
+
     document.getElementById("timer-display").textContent = formatDuration(diff);
   }
+
   tick();
   timerInterval = setInterval(tick, 1000);
 }
@@ -176,71 +297,139 @@ function startTimer() {
 function endDebate() {
   document.getElementById("open-modal-btn").style.display = "none";
   document.getElementById("ended-banner").style.display = "block";
-  // 모달 열려있으면 닫기
   document.getElementById("modal-overlay").style.display = "none";
 }
-
-// ── 매칭 로직 ──────────────────────────────────────────────
-// payload 구조:
-// {
-//   celebName: "아이유",
-//   side: "pro",
-//   matchKey: "proNick:conNick" | null,
-//   opinions: [ { text, side, celebName, timestamp } ]
-// }
 
 function buildMatchKey(proNick, conNick) {
   return proNick + "::" + conNick;
 }
 
-function tryMatch(payloads, myNick, mySide) {
-  // 이미 매칭된 상태면 스킵
-  var myPayload = payloads[myNick];
-  if (myPayload && myPayload.matchKey) {
+function getOpponentNick(matchKey, myNick) {
+  if (!matchKey) return "";
+  var parts = matchKey.split("::");
+  if (parts[0] === myNick) return parts[1];
+  if (parts[1] === myNick) return parts[0];
+  return "";
+}
+
+function resolveOwnMatchKey(payloads, myNick, myPayload) {
+  if (!myPayload || !myPayload.matchKey) {
+    return null;
+  }
+
+  var opponentNick = getOpponentNick(myPayload.matchKey, myNick);
+  if (!opponentNick) {
+    return null;
+  }
+
+  var opponentPayload = getCurrentPayload(payloads, opponentNick);
+  if (!opponentPayload) {
+    return null;
+  }
+
+  if (!opponentPayload.matchKey || opponentPayload.matchKey === myPayload.matchKey) {
     return myPayload.matchKey;
   }
 
-  var oppSide = mySide === "pro" ? "con" : "pro";
+  return null;
+}
 
-  // 상대방 중 매칭 안 된 사람 탐색
-  var candidates = Object.keys(payloads).filter(function (nick) {
-    if (nick === myNick) return false;
-    var p = payloads[nick];
-    return p && p.side === oppSide && !p.matchKey;
+function findExistingMatchForMe(payloads, myNick) {
+  var nicknames = Object.keys(payloads || {});
+
+  for (var i = 0; i < nicknames.length; i++) {
+    var nickname = nicknames[i];
+    if (nickname === myNick) continue;
+
+    var payload = getCurrentPayload(payloads, nickname);
+    if (!payload || !payload.matchKey) continue;
+
+    var parts = payload.matchKey.split("::");
+    if (parts[0] === myNick || parts[1] === myNick) {
+      return payload.matchKey;
+    }
+  }
+
+  return null;
+}
+
+function compareCandidates(aNick, bNick, payloads, myStance) {
+  var a = getCurrentPayload(payloads, aNick);
+  var b = getCurrentPayload(payloads, bNick);
+  var aGap = Math.abs(getStanceScore(a.stance) - getStanceScore(myStance));
+  var bGap = Math.abs(getStanceScore(b.stance) - getStanceScore(myStance));
+
+  if (aGap !== bGap) {
+    return bGap - aGap;
+  }
+
+  if ((a.joinedAt || 0) !== (b.joinedAt || 0)) {
+    return (a.joinedAt || 0) - (b.joinedAt || 0);
+  }
+
+  return aNick.localeCompare(bNick);
+}
+
+function tryMatch(payloads, myNick, mySide, myStance) {
+  if (!myStance) {
+    return null;
+  }
+
+  var oppSide = mySide === "pro" ? "con" : "pro";
+  var nicknames = Object.keys(payloads || {});
+  var candidates = nicknames.filter(function (nickname) {
+    if (nickname === myNick) return false;
+
+    var payload = getCurrentPayload(payloads, nickname);
+    if (!payload) return false;
+
+    return payload.side === oppSide &&
+      !!payload.stance &&
+      payload.stance !== myStance &&
+      !payload.matchKey;
   });
 
-  if (candidates.length === 0) return null;
+  if (candidates.length === 0) {
+    return null;
+  }
 
-  // 첫 번째 후보와 매칭
+  candidates.sort(function (aNick, bNick) {
+    return compareCandidates(aNick, bNick, payloads, myStance);
+  });
+
   var opponent = candidates[0];
   var proNick = mySide === "pro" ? myNick : opponent;
   var conNick = mySide === "con" ? myNick : opponent;
+
   return buildMatchKey(proNick, conNick);
 }
 
-// ── 의견 렌더링 ────────────────────────────────────────────
 function renderOpinions(payloads) {
   if (!myMatchKey) return;
 
-  // 매치에 속한 참여자 닉네임
   var parts = myMatchKey.split("::");
   var proNick = parts[0];
   var conNick = parts[1];
-
   var proOpinions = [];
   var conOpinions = [];
 
-  [proNick, conNick].forEach(function (nick) {
-    var p = payloads[nick];
-    if (!p || !p.opinions) return;
-    p.opinions.forEach(function (op) {
+  [proNick, conNick].forEach(function (nickname) {
+    var payload = getCurrentPayload(payloads, nickname);
+    if (!payload || !payload.opinions) return;
+
+    payload.opinions.forEach(function (opinion) {
       var item = {
-        celebName: p.celebName || nick,
-        text: op.text,
-        timestamp: op.timestamp
+        celebName: payload.celebName || nickname,
+        stance: payload.stance,
+        text: opinion.text,
+        timestamp: opinion.timestamp
       };
-      if (p.side === "pro") proOpinions.push(item);
-      else conOpinions.push(item);
+
+      if (payload.side === "pro") {
+        proOpinions.push(item);
+      } else {
+        conOpinions.push(item);
+      }
     });
   });
 
@@ -250,25 +439,32 @@ function renderOpinions(payloads) {
   renderList("pro-list", proOpinions);
   renderList("con-list", conOpinions);
 
-  // 상대방 이름 표시
   var opponentNick = myInfo.side === "pro" ? conNick : proNick;
-  var opponentPayload = payloads[opponentNick];
-  if (opponentPayload && opponentPayload.celebName) {
-    document.getElementById("opponent-name").textContent = opponentPayload.celebName;
+  var opponentPayload = getCurrentPayload(payloads, opponentNick);
+  if (opponentPayload) {
+    document.getElementById("opponent-name").textContent = opponentPayload.celebName || opponentNick;
+    document.getElementById("opponent-stance").textContent = getStanceMeta(opponentPayload.stance)
+      ? getStanceMeta(opponentPayload.stance).label
+      : "";
   }
 }
 
 function renderList(listId, opinions) {
   var el = document.getElementById(listId);
+
   if (opinions.length === 0) {
     el.innerHTML = '<p class="empty-text">아직 없습니다</p>';
     return;
   }
-  el.innerHTML = opinions.map(function (o) {
+
+  el.innerHTML = opinions.map(function (item) {
+    var stanceMeta = getStanceMeta(item.stance);
+    var metaText = item.celebName + (stanceMeta ? " · " + stanceMeta.label : "");
+
     return (
       '<div class="opinion-card">' +
-      '<div class="opinion-meta">' + escapeHtml(o.celebName) + '</div>' +
-      '<p class="opinion-text">' + escapeHtml(o.text) + '</p>' +
+      '<div class="opinion-meta">' + escapeHtml(metaText) + '</div>' +
+      '<p class="opinion-text">' + escapeHtml(item.text) + '</p>' +
       '</div>'
     );
   }).join("");
@@ -280,111 +476,38 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-// ── 메인 ──────────────────────────────────────────────────
-window.DebateCore.onReady(function (info) {
-  myInfo = info;
+function setupProfileHandlers(info) {
+  if (profileSetup) return;
+  profileSetup = true;
 
-  // 1. 닉네임 없으면 차단
-  if (!info.nickname) {
-    showMessage("토론 플랫폼을 통해 다시 접속하세요.");
-    return;
-  }
-
-  // 2. 연예인 이름 배정
-  myCelebName = getCelebName(info.nickname);
-
-  // 3. 토론 상태 체크
-  if (info.status === "pending") {
-    // 시간이 되면 새로고침
-    showWaiting();
-    return;
-  }
-
-  if (info.status !== "active") {
-    showMessage("토론이 종료되었습니다.");
-    return;
-  }
-
-  // 4. 클라이언트 측 시간 체크 (active 상태여도 시간 외면 대기)
-  if (!isDebateOpen()) {
-    showWaiting();
-    return;
-  }
-
-  // 5. UI 기본 설정
-  document.getElementById("debate-title").textContent = info.title || "(제목 없음)";
-  document.getElementById("nickname").textContent = myCelebName;
-
-  var sideBadge = document.getElementById("side-badge");
-  sideBadge.textContent = info.side === "pro" ? "찬성" : "반대";
-  sideBadge.classList.add(info.side);
-
-  var modalSideBadge = document.getElementById("modal-side-badge");
-  modalSideBadge.textContent = info.side === "pro" ? "찬성" : "반대";
-  modalSideBadge.classList.add(info.side);
-  document.getElementById("modal-nickname").textContent = myCelebName;
-
-  var isReadonly = info.role !== "participant";
-
-  // 6. 실시간 payload 감시
-  info.onPayloadsChange(function (payloads) {
-    var myPayload = payloads[info.nickname];
-
-    // 내 payload에 연예인 이름이 없으면 등록
-    if (!myPayload || !myPayload.celebName) {
-      if (!isReadonly) {
-        info.savePayload({
-          celebName: myCelebName,
-          side: info.side,
-          matchKey: null,
-          opinions: []
-        });
-      }
-      showMatching(myCelebName);
-      return;
-    }
-
-    // 매칭 시도
-    if (!myPayload.matchKey) {
-      var matchKey = tryMatch(payloads, info.nickname, info.side);
-      if (matchKey) {
-        myMatchKey = matchKey;
-        // 매칭 확정 저장
-        if (!isReadonly) {
-          info.savePayload({
-            celebName: myCelebName,
-            side: info.side,
-            matchKey: matchKey,
-            opinions: myPayload.opinions || []
-          });
-        }
-        showApp();
-        startTimer();
-        renderOpinions(payloads);
-        setupModalHandlers(info, myPayload.opinions || []);
-      } else {
-        showMatching(myCelebName);
-      }
-      return;
-    }
-
-    // 이미 매칭됨
-    myMatchKey = myPayload.matchKey;
-    showApp();
-
-    if (!timerInterval) {
-      startTimer();
-      if (!isReadonly) setupModalHandlers(info, myPayload.opinions || []);
-    }
-
-    renderOpinions(payloads);
+  var buttons = document.querySelectorAll(".stance-option");
+  Array.prototype.forEach.call(buttons, function (button) {
+    button.addEventListener("click", function () {
+      updateStanceSelection(button.getAttribute("data-stance"));
+    });
   });
-});
 
-// ── 모달 & 제출 ────────────────────────────────────────────
-var modalSetup = false;
+  document.getElementById("start-matching-btn").addEventListener("click", function () {
+    if (!selectedStance) return;
 
-function setupModalHandlers(info, initialOpinions) {
+    var currentPayload = getCurrentPayload(currentPayloads, info.nickname);
+    var startButton = document.getElementById("start-matching-btn");
+    startButton.disabled = true;
+
+    saveMergedPayload(info, currentPayload, {
+      celebName: myCelebName,
+      side: info.side,
+      stance: selectedStance,
+      matchKey: null
+    }).then(function () {
+      showMatching(info.side, selectedStance);
+    }).catch(function () {
+      startButton.disabled = false;
+    });
+  });
+}
+
+function setupModalHandlers(info) {
   if (modalSetup) return;
   modalSetup = true;
 
@@ -397,7 +520,6 @@ function setupModalHandlers(info, initialOpinions) {
   openBtn.style.display = "block";
 
   openBtn.addEventListener("click", function () {
-    // 시간 종료 체크
     if (debateEndTime && Date.now() >= debateEndTime.getTime()) {
       endDebate();
       return;
@@ -406,16 +528,23 @@ function setupModalHandlers(info, initialOpinions) {
     input.focus();
   });
 
-  closeBtn.addEventListener("click", function () { overlay.style.display = "none"; });
-  overlay.addEventListener("click", function (e) {
-    if (e.target === overlay) overlay.style.display = "none";
+  closeBtn.addEventListener("click", function () {
+    overlay.style.display = "none";
   });
-  document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape") overlay.style.display = "none";
+
+  overlay.addEventListener("click", function (event) {
+    if (event.target === overlay) {
+      overlay.style.display = "none";
+    }
+  });
+
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") {
+      overlay.style.display = "none";
+    }
   });
 
   submitBtn.addEventListener("click", function () {
-    // 시간 종료 체크
     if (debateEndTime && Date.now() >= debateEndTime.getTime()) {
       endDebate();
       overlay.style.display = "none";
@@ -424,42 +553,123 @@ function setupModalHandlers(info, initialOpinions) {
 
     var text = input.value.trim();
     if (!text) return;
+
+    var currentPayload = getCurrentPayload(currentPayloads, info.nickname) || buildEmptyPayload(info.side);
+    var opinions = (currentPayload.opinions || []).slice();
+
+    opinions.push({
+      text: text,
+      timestamp: Date.now()
+    });
+
     submitBtn.disabled = true;
 
-    // 현재 의견 목록은 전역 allOpinions 대신 payload에서 읽어야 하므로
-    // loadPayloads는 없지만 onPayloadsChange 콜백에서 이미 최신 상태를 받음
-    // 여기서는 저장된 내 opinions를 재활용
-    info.loadPayloads && info.loadPayloads().then(function (payloads) {
-      var mine = (payloads[info.nickname] && payloads[info.nickname].opinions) || [];
-      mine = mine.slice(); // 복사
-      mine.push({ text: text, timestamp: Date.now() });
-
-      info.savePayload({
-        celebName: myCelebName,
-        side: info.side,
-        matchKey: myMatchKey,
-        opinions: mine
-      }).then(function () {
-        input.value = "";
-        submitBtn.disabled = false;
-        overlay.style.display = "none";
-      }).catch(function () {
-        submitBtn.disabled = false;
-      });
+    saveMergedPayload(info, currentPayload, {
+      opinions: opinions,
+      matchKey: myMatchKey,
+      stance: currentPayload.stance || selectedStance
+    }).then(function () {
+      input.value = "";
+      submitBtn.disabled = false;
+      overlay.style.display = "none";
     }).catch(function () {
-      // loadPayloads 없는 환경(데모) 대비 fallback
-      info.savePayload({
-        celebName: myCelebName,
-        side: info.side,
-        matchKey: myMatchKey,
-        opinions: [{ text: text, timestamp: Date.now() }]
-      }).then(function () {
-        input.value = "";
-        submitBtn.disabled = false;
-        overlay.style.display = "none";
-      }).catch(function () {
-        submitBtn.disabled = false;
-      });
+      submitBtn.disabled = false;
     });
   });
 }
+
+window.DebateCore.onReady(function (info) {
+  myInfo = info;
+
+  if (!info.nickname) {
+    showMessage("토론 플랫폼을 통해 다시 접속하세요.");
+    return;
+  }
+
+  myCelebName = getCelebName(info.nickname);
+
+  if (info.status === "pending") {
+    showWaiting();
+    return;
+  }
+
+  if (info.status !== "active") {
+    showMessage("토론이 종료되었습니다.");
+    return;
+  }
+
+  if (!isDebateOpen()) {
+    showWaiting();
+    return;
+  }
+
+  if (info.role !== "participant") {
+    showMessage("이번 화면은 참여자만 매칭할 수 있습니다.");
+    return;
+  }
+
+  document.getElementById("debate-title").textContent = info.title || "(제목 없음)";
+  document.getElementById("nickname").textContent = myCelebName;
+  document.getElementById("modal-nickname").textContent = myCelebName;
+
+  setupProfileHandlers(info);
+
+  info.onPayloadsChange(function (payloads) {
+    currentPayloads = payloads || {};
+
+    var myPayload = getCurrentPayload(payloads, info.nickname);
+
+    if (!myPayload || !myPayload.celebName) {
+      saveMergedPayload(info, myPayload, {
+        celebName: myCelebName,
+        side: info.side
+      });
+
+      showProfileSelection(info.side, "");
+      return;
+    }
+
+    updateIdentity(myPayload);
+
+    if (!myPayload.stance) {
+      showProfileSelection(info.side, myPayload.stance);
+      return;
+    }
+
+    var resolvedMatch = resolveOwnMatchKey(payloads, info.nickname, myPayload);
+    if (!resolvedMatch) {
+      resolvedMatch = findExistingMatchForMe(payloads, info.nickname);
+    }
+
+    if (!resolvedMatch) {
+      if (myPayload.matchKey) {
+        saveMergedPayload(info, myPayload, { matchKey: null });
+      }
+
+      var newMatch = tryMatch(payloads, info.nickname, info.side, myPayload.stance);
+      if (newMatch) {
+        myMatchKey = newMatch;
+        saveMergedPayload(info, myPayload, { matchKey: newMatch });
+        showApp();
+        startTimer();
+        setupModalHandlers(info);
+        renderOpinions(payloads);
+      } else {
+        myMatchKey = null;
+        showMatching(info.side, myPayload.stance);
+      }
+      return;
+    }
+
+    myMatchKey = resolvedMatch;
+
+    if (myPayload.matchKey !== resolvedMatch) {
+      saveMergedPayload(info, myPayload, { matchKey: resolvedMatch });
+    }
+
+    showApp();
+    startTimer();
+    setupModalHandlers(info);
+    renderOpinions(payloads);
+  });
+});
