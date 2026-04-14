@@ -25,220 +25,106 @@
     </div>
   </div>
 
-  <!-- STEP 1: 찬반 카드 -->
-  <div id="side-screen" class="fullscreen" style="display:none">
-    <div class="side-top">
-      <div class="app-logo">💬 토론</div>
-      <div class="topic-pill">오늘의 주제</div>
-      <h2 id="side-topic" class="side-topic"></h2>
-    </div>
-    <div class="card-stack-area">
-      <div class="debate-card" id="debate-card">
-        <div class="card-gradient"></div>
-        <div class="card-content">
-          <div class="card-topic-label">이 주제에 대해</div>
-          <div class="card-topic-text" id="card-topic-text"></div>
-          <div class="card-question">당신의 입장은?</div>
-        </div>
-        <div class="swipe-hint-left"  id="hint-left">반대 ✕</div>
-        <div class="swipe-hint-right" id="hint-right">찬성 ♥</div>
+  <!-- 메인 피드 -->
+  <div id="feed-screen" style="display:none">
+
+    <!-- 헤더 -->
+    <div class="feed-header">
+      <div class="feed-header-left">
+        <div class="feed-avatar" id="feed-my-avatar"></div>
+        <div class="feed-my-name" id="feed-my-name"></div>
+      </div>
+      <div class="feed-header-center">
+        <div class="feed-topic" id="feed-topic"></div>
+      </div>
+      <div class="feed-header-right">
+        <div class="feed-timer" id="feed-timer">--:--</div>
       </div>
     </div>
-    <div class="action-btns">
-      <button class="action-btn con-btn" id="con-btn"><span class="action-icon">✕</span><span class="action-label">반대</span></button>
-      <button class="action-btn pro-btn" id="pro-btn"><span class="action-icon">♥</span><span class="action-label">찬성</span></button>
+
+    <!-- 주장 작성 -->
+    <div class="claim-compose">
+      <div class="compose-avatar" id="compose-avatar"></div>
+      <div class="compose-right">
+        <textarea id="compose-input" class="compose-input" placeholder="이 주제에 대한 나의 주장을 작성하세요..." rows="2"></textarea>
+        <div class="compose-footer">
+          <span id="compose-char" class="compose-char">0/200</span>
+          <button id="compose-submit" class="compose-submit-btn" disabled>게시</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 피드 -->
+    <div id="feed-list" class="feed-list">
+      <div class="feed-empty">아직 주장이 없습니다.<br>첫 주장을 올려보세요!</div>
     </div>
   </div>
 
-  <!-- STEP 2: 강경도 선택 -->
-  <div id="intensity-screen" class="fullscreen" style="display:none">
-    <div class="intensity-screen-inner">
-      <div class="is-header">
-        <div class="is-avatar" id="is-avatar"></div>
-        <div class="is-name" id="is-name"></div>
-        <div class="is-side-badge" id="is-side-badge"></div>
-      </div>
-      <div class="intensity-card">
-        <div class="intensity-card-title">강경도를 선택하세요</div>
-        <div class="intensity-row">
-          <button class="i-btn" data-intensity="1"><span class="i-num">1</span><span class="i-name">매우<br>온건</span></button>
-          <button class="i-btn" data-intensity="2"><span class="i-num">2</span><span class="i-name">온건</span></button>
-          <button class="i-btn" data-intensity="3"><span class="i-num">3</span><span class="i-name">중립</span></button>
-          <button class="i-btn" data-intensity="4"><span class="i-num">4</span><span class="i-name">강경</span></button>
-          <button class="i-btn" data-intensity="5"><span class="i-num">5</span><span class="i-name">매우<br>강경</span></button>
-        </div>
-        <div class="intensity-spectrum-bar">
-          <span class="spectrum-label left">모호파</span>
-          <div class="spectrum-track"><div id="spectrum-fill" class="spectrum-fill" style="width:0%"></div></div>
-          <span class="spectrum-label right">강경파</span>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- STEP 3: 대기 로비 (핵심 변경) -->
-  <div id="lobby-screen" style="display:none">
-
-    <!-- 상단 헤더 -->
-    <div class="lobby-header">
-      <div class="lobby-my-info">
-        <div class="lobby-avatar" id="lobby-avatar"></div>
-        <div>
-          <div class="lobby-name" id="lobby-name"></div>
-          <div class="lobby-stance" id="lobby-stance"></div>
-        </div>
-      </div>
-      <div class="lobby-timer-block">
-        <div class="lobby-timer-label">남은 시간</div>
-        <div id="lobby-timer" class="lobby-timer">--:--</div>
-      </div>
-    </div>
-
-    <!-- 주장 입력 영역 -->
-    <div class="claim-area" id="claim-area">
-      <div class="claim-prompt">상대를 기다리는 동안,<br>당신의 <strong>첫 주장</strong>을 준비해보세요</div>
-      <div class="claim-input-wrap">
-        <textarea id="claim-input" class="claim-input" placeholder="이 주제에 대한 나의 주장을 입력하세요..." rows="3"></textarea>
-        <div class="claim-status" id="claim-status">
-          <div class="searching-dot-row"><span class="sdot"></span><span class="sdot"></span><span class="sdot"></span></div>
-          <span id="claim-status-text">상대를 찾고 있습니다...</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- 매칭 알림 배너 -->
-    <div id="match-notification" class="match-notification" style="display:none">
-      <div class="notif-avatar" id="notif-avatar"></div>
-      <div class="notif-text"><span id="notif-name" class="notif-name"></span>님이 대화를 신청했어요!</div>
-      <button id="notif-enter-btn" class="notif-enter-btn">입장 →</button>
-    </div>
-
-    <!-- 관전 탭 -->
-    <div class="lobby-tabs">
-      <button class="lobby-tab active" data-tab="live">🔴 진행 중인 대화</button>
-      <button class="lobby-tab" data-tab="ended">✅ 종료된 대화</button>
-    </div>
-
-    <div id="lobby-live-list"   class="lobby-chat-list"></div>
-    <div id="lobby-ended-list"  class="lobby-chat-list" style="display:none"></div>
-  </div>
-
-  <!-- 대화 신청 수락 모달 -->
-  <div id="chat-request-overlay" class="end-confirm-overlay" style="display:none">
-    <div class="end-confirm-box">
-      <div class="notif-avatar request-avatar" id="request-avatar" style="width:56px;height:56px;font-size:1.4rem;margin:0 auto"></div>
-      <div class="end-confirm-title" id="request-title"></div>
-      <div class="end-confirm-desc">수락하면 1:1 채팅이 바로 시작됩니다</div>
-      <div class="end-confirm-btns" style="justify-content:center">
-        <button id="request-accept-btn" class="end-ok-btn" style="flex:unset;padding:.75rem 2rem">수락하기</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- STEP 4: 채팅 -->
+  <!-- 1:1 채팅 화면 -->
   <div id="chat-screen" style="display:none">
     <div class="chat-header">
       <button id="chat-back-btn" class="chat-back-btn">←</button>
       <div class="chat-header-info">
         <div class="chat-opp-avatar" id="chat-opp-avatar"></div>
-        <div class="chat-opp-info">
-          <div class="chat-opp-name"   id="chat-opp-name"></div>
-          <div class="chat-opp-stance" id="chat-opp-stance"></div>
+        <div>
+          <div class="chat-opp-name" id="chat-opp-name"></div>
+          <div class="chat-opp-sub">1:1 대화 중</div>
         </div>
       </div>
       <div class="chat-header-right">
-        <div class="chat-timer"><span class="chat-timer-label">종료까지</span><span id="chat-timer" class="chat-timer-val">--:--</span></div>
+        <div class="chat-timer-wrap">
+          <span class="chat-timer-label">종료까지</span>
+          <span id="chat-timer" class="chat-timer-val">--:--</span>
+        </div>
         <button id="end-chat-btn" class="end-chat-btn">■ 종료</button>
       </div>
     </div>
-    <div class="chat-topic-bar">
-      <span class="chat-topic-label">주제</span>
-      <span id="chat-topic-text" class="chat-topic-text"></span>
+
+    <div class="chat-context-bar" id="chat-context-bar">
+      <!-- 대화 신청한 주장 미리보기 -->
     </div>
-    <div class="chat-intensity-bar">
-      <span class="cib-label">내 강경도</span>
-      <div class="cib-btns" id="cib-btns">
-        <button class="cib-btn" data-v="1">1</button><button class="cib-btn" data-v="2">2</button>
-        <button class="cib-btn" data-v="3">3</button><button class="cib-btn" data-v="4">4</button>
-        <button class="cib-btn" data-v="5">5</button>
-      </div>
-      <span class="cib-hint" id="cib-hint"></span>
-    </div>
+
     <div id="chat-messages" class="chat-messages"></div>
-    <div id="chat-ended-bar" class="chat-ended-bar" style="display:none">대화가 종료되었습니다 — <button id="goto-lobby-btn" class="goto-lobby-btn">관전으로 돌아가기</button></div>
+
+    <div id="chat-ended-bar" class="chat-ended-bar" style="display:none">
+      대화가 종료되었습니다 &nbsp;
+      <button id="goto-feed-btn" class="goto-feed-btn">피드로 돌아가기</button>
+    </div>
+
     <div id="chat-input-area" class="chat-input-area">
-      <textarea id="chat-input" class="chat-input" placeholder="의견을 입력하세요..." rows="1"></textarea>
+      <textarea id="chat-input" class="chat-input" placeholder="메시지 입력..." rows="1"></textarea>
       <button id="chat-send-btn" class="chat-send-btn">↑</button>
     </div>
   </div>
 
   <!-- 종료 확인 모달 -->
-  <div id="end-confirm-overlay" class="end-confirm-overlay" style="display:none">
-    <div class="end-confirm-box">
-      <div class="end-confirm-icon">⚠️</div>
-      <div class="end-confirm-title">대화를 종료할까요?</div>
-      <div class="end-confirm-desc">종료하면 상대방도 더 이상<br>메시지를 보낼 수 없습니다.</div>
-      <div class="end-confirm-btns">
-        <button id="end-cancel-btn" class="end-cancel-btn">취소</button>
-        <button id="end-confirm-btn" class="end-ok-btn">종료하기</button>
+  <div id="end-confirm-overlay" class="overlay-bg" style="display:none">
+    <div class="modal-box">
+      <div class="modal-icon">⚠️</div>
+      <div class="modal-title">대화를 종료할까요?</div>
+      <div class="modal-desc">종료하면 상대방도 더 이상 메시지를 보낼 수 없습니다.</div>
+      <div class="modal-btns">
+        <button id="end-cancel-btn" class="modal-btn-cancel">취소</button>
+        <button id="end-confirm-btn" class="modal-btn-ok">종료</button>
       </div>
     </div>
   </div>
 
-  <!-- STEP 5: 평가 -->
-  <div id="eval-screen" class="fullscreen" style="display:none">
-    <div class="eval-inner">
-      <div class="eval-title">대화가 끝났어요</div>
-      <div class="eval-subtitle" id="eval-subtitle"></div>
-      <div id="eval-persuasion" style="display:none">
-        <div class="eval-section-label">대화 후 입장이 바뀌었나요?</div>
-        <div class="eval-persuasion-btns">
-          <button class="eval-p-btn" data-val="yes"><span class="eval-p-icon">✅</span><span class="eval-p-text">설득됐어요</span><span class="eval-p-sub">상대 의견이 설득력 있었어요</span></button>
-          <button class="eval-p-btn" data-val="maybe"><span class="eval-p-icon">🤔</span><span class="eval-p-text">잘 모르겠어요</span><span class="eval-p-sub">아직 고민 중이에요</span></button>
-          <button class="eval-p-btn" data-val="no"><span class="eval-p-icon">🙅</span><span class="eval-p-text">설득 안 됐어요</span><span class="eval-p-sub">내 생각은 변하지 않았어요</span></button>
-        </div>
+  <!-- 대화 신청 수신 모달 -->
+  <div id="request-overlay" class="overlay-bg" style="display:none">
+    <div class="modal-box">
+      <div class="request-avatar-wrap">
+        <div class="request-avatar" id="request-avatar"></div>
       </div>
-      <div id="eval-rating" style="display:none">
-        <div class="eval-section-label">상대방의 대화를 평가해주세요</div>
-        <div class="eval-rating-items">
-          <div class="eval-rating-item"><div class="eval-rating-label">논리적이었나요?</div><div class="eval-stars" data-key="logic"><span class="star" data-v="1">★</span><span class="star" data-v="2">★</span><span class="star" data-v="3">★</span><span class="star" data-v="4">★</span><span class="star" data-v="5">★</span></div></div>
-          <div class="eval-rating-item"><div class="eval-rating-label">태도가 좋았나요?</div><div class="eval-stars" data-key="attitude"><span class="star" data-v="1">★</span><span class="star" data-v="2">★</span><span class="star" data-v="3">★</span><span class="star" data-v="4">★</span><span class="star" data-v="5">★</span></div></div>
-          <div class="eval-rating-item"><div class="eval-rating-label">상대 입장을 이해했나요?</div><div class="eval-stars" data-key="understanding"><span class="star" data-v="1">★</span><span class="star" data-v="2">★</span><span class="star" data-v="3">★</span><span class="star" data-v="4">★</span><span class="star" data-v="5">★</span></div></div>
-        </div>
-      </div>
-      <div class="eval-final-intensity">
-        <div class="eval-section-label">지금 내 강경도는?</div>
-        <div class="eval-intensity-row" id="eval-intensity-row">
-          <button class="eval-i-btn" data-v="1">1<span>매우<br>온건</span></button>
-          <button class="eval-i-btn" data-v="2">2<span>온건</span></button>
-          <button class="eval-i-btn" data-v="3">3<span>중립</span></button>
-          <button class="eval-i-btn" data-v="4">4<span>강경</span></button>
-          <button class="eval-i-btn" data-v="5">5<span>매우<br>강경</span></button>
-        </div>
-      </div>
-      <button id="eval-submit-btn" class="eval-submit-btn" disabled>평가 제출하고 관전하기</button>
-    </div>
-  </div>
-
-  <!-- 관전 중 대화 상세 모달 -->
-  <div id="spectate-modal" class="spectate-modal" style="display:none">
-    <div class="spectate-inner">
-      <div class="spectate-header">
-        <button id="spectate-close-btn" class="spectate-close">✕</button>
-        <div class="spectate-title" id="spectate-title"></div>
-        <div class="spectate-badges" id="spectate-badges"></div>
-      </div>
-      <div id="spectate-messages" class="spectate-messages"></div>
-      <div class="spectate-actions">
-        <div class="reaction-btns" id="reaction-btns">
-          <button class="reaction-btn reaction-btn-single" data-emoji="👍">👍 공감 <span id="r-count-like">0</span></button>
-        </div>
-        <button id="spectate-request-btn" class="spectate-request-btn" style="display:none">💬 대화 신청하기</button>
+      <div class="modal-title" id="request-title"></div>
+      <div class="modal-desc" id="request-claim-preview"></div>
+      <div class="modal-btns" style="justify-content:center">
+        <button id="request-accept-btn" class="modal-btn-ok" style="flex:unset;padding:.75rem 2rem">수락하기</button>
       </div>
     </div>
   </div>
 
-  <script src="https://debate-md2-2603.web.app/debate-core.js" data-architect-id="soori"></script>
+  <script src="https://debate-md2-2603.web.app/debate-core.js" data-architect-id="default"></script>
   <script src="app.js"></script>
 </body>
 </html>
