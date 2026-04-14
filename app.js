@@ -17,7 +17,7 @@
  */
 
 // ── 설정 ─────────────────────────────────────────────────
-var DEBATE_START_HOUR = 21;
+var DEBATE_START_HOUR = 14;
 var DEBATE_END_HOUR   = 24;
 var MAX_CLAIM_LEN     = 200;
 
