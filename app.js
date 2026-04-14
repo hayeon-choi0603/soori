@@ -15,7 +15,7 @@
  */
 
 // ── 설정 ─────────────────────────────────────────────────
-var DEBATE_START_HOUR = 21;
+var DEBATE_START_HOUR = 10;
 var DEBATE_END_HOUR   = 24;
 
 var INTENSITY_LABELS = {1:"매우 온건",2:"온건",3:"중립",4:"강경",5:"매우 강경"};
