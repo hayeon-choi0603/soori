@@ -9,8 +9,8 @@
  */
 
 // ── 설정 ─────────────────────────────────────────────────
-var DEBATE_START_HOUR = 21;
-var DEBATE_END_HOUR   = 24;
+var DEBATE_START_HOUR = 9;
+var DEBATE_END_HOUR   = 17;
 
 var INTENSITY_LABELS = { 1:"매우 온건", 2:"온건", 3:"중립", 4:"강경", 5:"매우 강경" };
 
@@ -149,10 +149,10 @@ function showMatchFound(oppName, oppColor, matchType) {
   // 매치 타입 배지 (가설 2)
   var badge = document.getElementById("match-type-badge");
   if (matchType === "cross") {
-    badge.textContent = "🎯 모호파 ↔ 강경파 매칭";
+    badge.textContent = "모호 ↔ 강경 매칭";
     badge.className = "match-type-badge cross";
   } else {
-    badge.textContent = "⚡ 강경파 간 토론";
+    badge.textContent = "강경파 간 대화";
     badge.className = "match-type-badge strong";
   }
   document.getElementById("match-found-screen").style.display = "flex";
@@ -644,3 +644,4 @@ window.DebateCore.onReady(function(info) {
       });
   });
 });
+function isDebateOpen() { return true; }
