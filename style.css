@@ -333,6 +333,35 @@ header {
   margin-top: 0.2rem;
 }
 
+/* ── 다음 상대 버튼 ── */
+
+#rematch-area {
+  padding: 0.5rem 1.25rem;
+  background: #fafafa;
+  border-bottom: 1px solid #e8e8e8;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn-rematch {
+  padding: 0.4rem 0.9rem;
+  background: none;
+  color: #555;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-rematch:hover {
+  background: #f0f0f0;
+  border-color: #bbb;
+  color: #1a1a1a;
+}
+
 /* ── 채팅 입력 영역 ── */
 
 .chat-input-area {
