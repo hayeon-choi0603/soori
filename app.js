@@ -103,7 +103,7 @@ function getNextOpenMs(date) {
 
   // 현재 KST 시각을 분 단위 (0~1439)
   var kstTotalSec = kstHour * 3600 + kstMinute * 60 + kstSecond;
-  var open1 = 17 * 3600; // 17:00
+  var open1 = 17 * 3600; // 00:00
   var open2 = 20 * 3600; // 20:00
 
   var remainSec;
