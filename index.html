@@ -27,14 +27,13 @@
     </div>
   </div>
 
-  <!-- STEP 1: 찬반 카드 스와이프 -->
+  <!-- STEP 1: 찬반 카드 -->
   <div id="side-screen" class="fullscreen" style="display:none">
     <div class="side-top">
       <div class="app-logo">💬 토론</div>
       <div class="topic-pill">오늘의 주제</div>
       <h2 id="side-topic" class="side-topic"></h2>
     </div>
-
     <div class="card-stack-area">
       <div class="debate-card" id="debate-card">
         <div class="card-gradient"></div>
@@ -43,12 +42,10 @@
           <div class="card-topic-text" id="card-topic-text"></div>
           <div class="card-question">당신의 입장은?</div>
         </div>
-        <!-- 스와이프 힌트 오버레이 -->
-        <div class="swipe-hint-left" id="hint-left">반대 👎</div>
-        <div class="swipe-hint-right" id="hint-right">찬성 👍</div>
+        <div class="swipe-hint-left"  id="hint-left">반대 ✕</div>
+        <div class="swipe-hint-right" id="hint-right">찬성 ♥</div>
       </div>
     </div>
-
     <div class="action-btns">
       <button class="action-btn con-btn" id="con-btn">
         <span class="action-icon">✕</span>
@@ -61,24 +58,37 @@
     </div>
   </div>
 
-  <!-- STEP 2: 강경도 선택 (매칭 대기) -->
+  <!-- STEP 2: 강경도 선택 + 매칭 대기 -->
   <div id="matching-screen" class="fullscreen" style="display:none">
+
+    <!-- 디스코드식 알림 배너 -->
+    <div id="match-notification" class="match-notification" style="display:none">
+      <div class="notif-avatar" id="notif-avatar"></div>
+      <div class="notif-text">
+        <span id="notif-name" class="notif-name"></span>님이 대화를 신청했어요!
+      </div>
+      <button id="notif-enter-btn" class="notif-enter-btn">입장 →</button>
+    </div>
+
     <div class="matching-header">
       <div class="matching-avatar" id="matching-avatar"></div>
-      <div class="matching-name" id="matching-celeb-name"></div>
+      <div class="matching-name"      id="matching-celeb-name"></div>
       <div class="matching-side-badge" id="matching-side-badge"></div>
     </div>
 
     <div class="intensity-card">
       <div class="intensity-card-title">강경도를 선택하면<br>매칭이 시작됩니다</div>
-      <div class="intensity-slider-area">
-        <div class="intensity-row">
-          <button class="i-btn" data-intensity="1"><span class="i-num">1</span><span class="i-name">매우 온건</span></button>
-          <button class="i-btn" data-intensity="2"><span class="i-num">2</span><span class="i-name">온건</span></button>
-          <button class="i-btn" data-intensity="3"><span class="i-num">3</span><span class="i-name">중립</span></button>
-          <button class="i-btn" data-intensity="4"><span class="i-num">4</span><span class="i-name">강경</span></button>
-          <button class="i-btn" data-intensity="5"><span class="i-num">5</span><span class="i-name">매우 강경</span></button>
-        </div>
+      <div class="intensity-row">
+        <button class="i-btn" data-intensity="1"><span class="i-num">1</span><span class="i-name">매우<br>온건</span></button>
+        <button class="i-btn" data-intensity="2"><span class="i-num">2</span><span class="i-name">온건</span></button>
+        <button class="i-btn" data-intensity="3"><span class="i-num">3</span><span class="i-name">중립</span></button>
+        <button class="i-btn" data-intensity="4"><span class="i-num">4</span><span class="i-name">강경</span></button>
+        <button class="i-btn" data-intensity="5"><span class="i-num">5</span><span class="i-name">매우<br>강경</span></button>
+      </div>
+      <div class="intensity-spectrum-bar">
+        <span class="spectrum-label left">모호파</span>
+        <div class="spectrum-track"><div id="spectrum-fill" class="spectrum-fill" style="width:0%"></div></div>
+        <span class="spectrum-label right">강경파</span>
       </div>
     </div>
 
@@ -90,42 +100,63 @@
     </div>
   </div>
 
-  <!-- STEP 3: 매칭 완료 애니메이션 -->
+  <!-- STEP 3: 매칭 완료 -->
   <div id="match-found-screen" class="fullscreen" style="display:none">
     <div class="match-found-inner">
       <div class="match-found-hearts">💬</div>
-      <div class="match-found-title">매칭 완료!</div>
+      <div class="match-found-title">대화 상대 발견!</div>
       <div class="match-found-sub" id="match-found-sub"></div>
       <div class="match-avatars">
-        <div class="match-av" id="av-me"></div>
+        <div class="match-av-col">
+          <div class="match-av" id="av-me"></div>
+          <div class="match-av-label" id="av-me-label"></div>
+        </div>
         <div class="match-av-vs">VS</div>
-        <div class="match-av" id="av-opp"></div>
+        <div class="match-av-col">
+          <div class="match-av" id="av-opp"></div>
+          <div class="match-av-label" id="av-opp-label"></div>
+        </div>
       </div>
+      <div id="match-type-badge" class="match-type-badge"></div>
       <button class="btn-start-chat" id="start-chat-btn">대화 시작하기 →</button>
     </div>
   </div>
 
-  <!-- STEP 4: 채팅 화면 -->
+  <!-- STEP 4: 채팅 -->
   <div id="chat-screen" style="display:none">
     <div class="chat-header">
       <div class="chat-header-info">
         <div class="chat-opp-avatar" id="chat-opp-avatar"></div>
         <div class="chat-opp-info">
-          <div class="chat-opp-name" id="chat-opp-name"></div>
+          <div class="chat-opp-name"   id="chat-opp-name"></div>
           <div class="chat-opp-stance" id="chat-opp-stance"></div>
         </div>
       </div>
       <div class="chat-header-right">
         <div class="chat-timer">
-          <span class="chat-timer-label">종료</span>
+          <span class="chat-timer-label">종료까지</span>
           <span id="chat-timer" class="chat-timer-val">--:--</span>
         </div>
+        <button id="end-chat-btn" class="end-chat-btn">■ 종료</button>
       </div>
     </div>
 
     <div class="chat-topic-bar">
       <span class="chat-topic-label">주제</span>
       <span id="chat-topic-text" class="chat-topic-text"></span>
+    </div>
+
+    <!-- 채팅 중 강경도 슬라이더 (가설 2, 5) -->
+    <div class="chat-intensity-bar">
+      <span class="cib-label">내 강경도</span>
+      <div class="cib-btns" id="cib-btns">
+        <button class="cib-btn" data-v="1">1</button>
+        <button class="cib-btn" data-v="2">2</button>
+        <button class="cib-btn" data-v="3">3</button>
+        <button class="cib-btn" data-v="4">4</button>
+        <button class="cib-btn" data-v="5">5</button>
+      </div>
+      <span class="cib-hint" id="cib-hint"></span>
     </div>
 
     <div id="chat-messages" class="chat-messages"></div>
@@ -140,6 +171,101 @@
     </div>
   </div>
 
+  <!-- 종료 확인 모달 -->
+  <div id="end-confirm-overlay" class="end-confirm-overlay" style="display:none">
+    <div class="end-confirm-box">
+      <div class="end-confirm-icon">⚠️</div>
+      <div class="end-confirm-title">대화를 종료할까요?</div>
+      <div class="end-confirm-desc">종료하면 상대방도 더 이상<br>메시지를 보낼 수 없습니다.</div>
+      <div class="end-confirm-btns">
+        <button id="end-cancel-btn"  class="end-cancel-btn">취소</button>
+        <button id="end-confirm-btn" class="end-ok-btn">종료하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 5: 종료 후 평가 화면 -->
+  <div id="eval-screen" class="fullscreen" style="display:none">
+    <div class="eval-inner">
+      <div class="eval-title">대화가 끝났어요</div>
+      <div class="eval-subtitle" id="eval-subtitle"></div>
+
+      <!-- 모호파용: 설득 여부 -->
+      <div id="eval-persuasion" style="display:none">
+        <div class="eval-section-label">대화 후 입장이 바뀌었나요?</div>
+        <div class="eval-persuasion-btns">
+          <button class="eval-p-btn" data-val="yes">
+            <span class="eval-p-icon">✅</span>
+            <span class="eval-p-text">설득됐어요</span>
+            <span class="eval-p-sub">상대 의견이 설득력 있었어요</span>
+          </button>
+          <button class="eval-p-btn" data-val="maybe">
+            <span class="eval-p-icon">🤔</span>
+            <span class="eval-p-text">잘 모르겠어요</span>
+            <span class="eval-p-sub">아직 고민 중이에요</span>
+          </button>
+          <button class="eval-p-btn" data-val="no">
+            <span class="eval-p-icon">🙅</span>
+            <span class="eval-p-text">설득 안 됐어요</span>
+            <span class="eval-p-sub">내 생각은 변하지 않았어요</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 강경파용: 상대 평가 -->
+      <div id="eval-rating" style="display:none">
+        <div class="eval-section-label">상대방의 대화를 평가해주세요</div>
+        <div class="eval-rating-items">
+          <div class="eval-rating-item">
+            <div class="eval-rating-label">논리적이었나요?</div>
+            <div class="eval-stars" data-key="logic">
+              <span class="star" data-v="1">★</span><span class="star" data-v="2">★</span>
+              <span class="star" data-v="3">★</span><span class="star" data-v="4">★</span><span class="star" data-v="5">★</span>
+            </div>
+          </div>
+          <div class="eval-rating-item">
+            <div class="eval-rating-label">태도가 좋았나요?</div>
+            <div class="eval-stars" data-key="attitude">
+              <span class="star" data-v="1">★</span><span class="star" data-v="2">★</span>
+              <span class="star" data-v="3">★</span><span class="star" data-v="4">★</span><span class="star" data-v="5">★</span>
+            </div>
+          </div>
+          <div class="eval-rating-item">
+            <div class="eval-rating-label">상대 입장을 이해했나요?</div>
+            <div class="eval-stars" data-key="understanding">
+              <span class="star" data-v="1">★</span><span class="star" data-v="2">★</span>
+              <span class="star" data-v="3">★</span><span class="star" data-v="4">★</span><span class="star" data-v="5">★</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 최종 강경도 -->
+      <div class="eval-final-intensity">
+        <div class="eval-section-label">지금 내 강경도는?</div>
+        <div class="eval-intensity-row" id="eval-intensity-row">
+          <button class="eval-i-btn" data-v="1">1<span>매우<br>온건</span></button>
+          <button class="eval-i-btn" data-v="2">2<span>온건</span></button>
+          <button class="eval-i-btn" data-v="3">3<span>중립</span></button>
+          <button class="eval-i-btn" data-v="4">4<span>강경</span></button>
+          <button class="eval-i-btn" data-v="5">5<span>매우<br>강경</span></button>
+        </div>
+      </div>
+
+      <button id="eval-submit-btn" class="eval-submit-btn" disabled>평가 제출하기</button>
+    </div>
+  </div>
+
+  <!-- STEP 6: 완료 화면 -->
+  <div id="done-screen" class="fullscreen" style="display:none">
+    <div class="center-box">
+      <div class="done-icon">🎉</div>
+      <div class="done-title">참여 완료!</div>
+      <div class="done-sub" id="done-sub"></div>
+      <div class="done-change" id="done-change"></div>
+    </div>
+  </div>
+
   <!-- 관찰자 화면 -->
   <div id="viewer-screen" style="display:none">
     <div class="viewer-header">
@@ -149,7 +275,7 @@
     <div id="viewer-matches" class="viewer-matches"></div>
   </div>
 
-  <script src="https://debate-md2-2603.web.app/debate-core.js" data-architect-id="soori"></script>
+  <script src="https://debate-md2-2603.web.app/debate-core.js" data-architect-id="default"></script>
   <script src="app.js"></script>
 </body>
 </html>
