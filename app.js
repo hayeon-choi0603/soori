@@ -12,20 +12,6 @@ var CELEBRITY_NAMES = [
   "레이디 가가", "박보검", "수지", "로제", "비욘세"
 ];
 
-// 시간 제한과 무관하게 읽기 전용으로 항상 입장 가능한 닉네임
-var VIEWER_NICKNAMES = ["tomo", "gregory", "soori"];
-function isViewer(info) {
-  return !!(info && info.nickname && VIEWER_NICKNAMES.indexOf(info.nickname) !== -1);
-}
-
-// 이 시각(KST) 이후로는 모두에게 공개되지만 쓰기는 차단됨
-// 2026-04-15 18:00 KST = 2026-04-15 09:00 UTC
-var VIEW_ONLY_AFTER_MS = Date.UTC(2026, 3, 15, 9, 0, 0);
-var viewOnlyMode = false;
-function isReadOnly(info) {
-  return viewOnlyMode || isViewer(info);
-}
-
 var myInfo = null;
 var myCelebrity = null;
 var allPayloads = {};
@@ -49,9 +35,8 @@ window.DebateCore.onReady(function (info) {
   info.getServerTime().then(function (serverDate) {
     var localNow = Date.now();
     serverTimeOffset = localNow - serverDate.getTime();
-    viewOnlyMode = serverDate.getTime() >= VIEW_ONLY_AFTER_MS;
 
-    if (!isDebateOpen(serverDate) && !isReadOnly(info)) {
+    if (!isDebateOpen(serverDate)) {
       showCountdown(info.title || "토론");
       return;
     }
@@ -75,8 +60,7 @@ window.DebateCore.onReady(function (info) {
   }).catch(function () {
     // 서버 시간 실패 시 로컬 시간으로 폴백
     var localDate = new Date();
-    viewOnlyMode = localDate.getTime() >= VIEW_ONLY_AFTER_MS;
-    if (!isDebateOpen(localDate) && !isReadOnly(info)) {
+    if (!isDebateOpen(localDate)) {
       showCountdown(info.title || "토론");
       return;
     }
@@ -92,33 +76,23 @@ window.DebateCore.onReady(function (info) {
 // ───────────────────────────────
 
 function isDebateOpen(date) {
-  var kstHour = (date.getUTCHours() + 9) % 24;
-  return (kstHour >= 17 && kstHour < 18) || (kstHour >= 20 && kstHour < 21);
+  return true;
 }
 
-function getNextOpenMs(date) {
-  var kstHour = (date.getUTCHours() + 9) % 24;
-  var kstMinute = date.getUTCMinutes();
-  var kstSecond = date.getUTCSeconds();
-
-  // 현재 KST 시각을 분 단위 (0~1439)
-  var kstTotalSec = kstHour * 3600 + kstMinute * 60 + kstSecond;
-  var open1 = 17 * 3600; // 00:00
-  var open2 = 20 * 3600; // 20:00
-
-  var remainSec;
-  if (kstTotalSec < open1) {
-    remainSec = open1 - kstTotalSec;
-  } else if (kstTotalSec < open2) {
-    remainSec = open2 - kstTotalSec;
-  } else {
-    // 다음날 17:00
-    remainSec = (24 * 3600 - kstTotalSec) + open1;
-  }
-  return remainSec * 1000;
+function getNextOpenMs() {
+  return 0;
 }
 
 function showCountdown(title) {
+  // debate-core가 시간 외로 판단해도 myInfo가 있으면 앱 시작
+  if (myInfo) {
+    assignCelebrity(myInfo, function (celebName) {
+      myCelebrity = celebName;
+      startApp(myInfo);
+    });
+    return;
+  }
+
   hideAll();
   document.getElementById("countdown-title").textContent = title;
   document.getElementById("countdown-screen").style.display = "flex";
@@ -313,7 +287,7 @@ function startApp(info) {
     var myPayload = payloads[info.nickname] || {};
 
     // 주장이 없으면 claim 화면, 있으면 메인 앱
-    if (!myPayload.claim && !isReadOnly(info)) {
+    if (!myPayload.claim) {
       showClaimScreen(info);
     } else {
       showMainApp(info, payloads);
@@ -341,15 +315,11 @@ function showClaimScreen(info) {
   var submitBtn = document.getElementById("claim-submit-btn");
   var input = document.getElementById("claim-input");
 
-  // 읽기 전용 (아키텍트/아젠다세터/뷰어/감상 모드)
-  if (info.role !== "participant" || isReadOnly(info)) {
+  // 읽기 전용 (아키텍트/아젠다세터)
+  if (info.role !== "participant") {
     input.disabled = true;
     submitBtn.disabled = true;
-    submitBtn.textContent = viewOnlyMode
-      ? "토론이 마감되어 읽기 전용입니다"
-      : (isViewer(info)
-        ? "읽기 전용 계정입니다"
-        : "참여자만 주장을 제출할 수 있습니다");
+    submitBtn.textContent = "참여자만 주장을 제출할 수 있습니다";
     return;
   }
 
@@ -377,7 +347,7 @@ function showClaimScreen(info) {
 
 function showMainApp(info, payloads) {
   hideAll();
-  document.getElementById("app").style.display = "flex";
+  document.getElementById("app").style.display = "block";
 
   document.getElementById("app-celebrity").textContent = myCelebrity;
   document.getElementById("app-title").textContent = info.title || "";
@@ -394,7 +364,7 @@ function showMainApp(info, payloads) {
       btn.classList.add("active");
       var tab = btn.getAttribute("data-tab");
       document.getElementById("tab-my-chat").style.display = tab === "my-chat" ? "flex" : "none";
-      document.getElementById("tab-all-chats").style.display = tab === "all-chats" ? "flex" : "none";
+      document.getElementById("tab-all-chats").style.display = tab === "all-chats" ? "block" : "none";
     };
   });
 
@@ -409,68 +379,79 @@ function showMainApp(info, payloads) {
 function renderMyChat(info, payloads) {
   var myPayload = payloads[info.nickname] || {};
   var match = findMyMatch(info, payloads);
-  var chatArea = document.getElementById("chat-messages");
 
-  // 내 주장
-  var myClaimHtml = renderClaimBubble(
-    myCelebrity, info.side, myPayload.claim ? myPayload.claim.text : "",
-    "mine", myPayload.claim ? myPayload.claim.timestamp : null
+  // 현재 매칭 라운드 offset 결정
+  var currentMatchOffset;
+  if (info.side === "pro") {
+    currentMatchOffset = myPayload.matchOffset || 0;
+  } else if (match) {
+    currentMatchOffset = (payloads[match.nickname] || {}).matchOffset || 0;
+  } else {
+    currentMatchOffset = 0;
+  }
+
+  // 내 주장 (말풍선)
+  var myCard = document.getElementById("my-claim-card");
+  myCard.innerHTML = renderClaimBubble(
+    myCelebrity, info.side, myPayload.claim ? myPayload.claim.text : "", "mine"
   );
 
-  // 상대 주장 + 채팅
-  var partnerClaimHtml = "";
-  var messagesHtml = "";
-
+  // 상대 주장 (말풍선)
+  var partnerCard = document.getElementById("partner-claim-card");
   if (match) {
     var partnerPayload = payloads[match.nickname] || {};
     var partnerCeleb = partnerPayload.celebrityName || match.nickname;
     var partnerSide = partnerPayload.side || match.side;
-    partnerClaimHtml = renderClaimBubble(
-      partnerCeleb, partnerSide, partnerPayload.claim ? partnerPayload.claim.text : "(주장 없음)",
-      "partner", partnerPayload.claim ? partnerPayload.claim.timestamp : null
+    partnerCard.innerHTML = renderClaimBubble(
+      partnerCeleb, partnerSide, partnerPayload.claim ? partnerPayload.claim.text : "(주장 없음)", "partner"
     );
-    var merged = mergeMessages(
-      myPayload.messages || [],
-      partnerPayload.messages || [],
-      info.nickname,
-      match.nickname,
-      myCelebrity,
-      partnerCeleb,
-      info.side,
-      partnerSide
-    );
-    messagesHtml = buildMessagesHtml(merged, info.nickname);
+    partnerCard.style.display = "block";
   } else {
-    partnerClaimHtml = '<p class="waiting-text">매칭 상대를 찾고 있습니다...</p>';
+    partnerCard.innerHTML = '<p class="waiting-text">매칭 상대를 찾고 있습니다...</p>';
   }
 
-  chatArea.innerHTML = myClaimHtml + partnerClaimHtml + messagesHtml;
-  chatArea.scrollTop = chatArea.scrollHeight;
-
-  // 타이핑 연출 진행중이면 재렌더 후에도 유지
-  if (typingActive && match) {
-    var tpPayload = payloads[match.nickname] || {};
-    var tpCeleb = tpPayload.celebrityName || match.nickname;
-    var tpSide = tpPayload.side || match.side;
-    showPartnerTyping(chatArea, tpCeleb, tpSide);
-  }
-
-  // 찬성 참여자 전용 재매칭 버튼
-  var rematchBar = document.getElementById("rematch-bar");
-  if (info.side === "pro" && info.role === "participant" && !isReadOnly(info) && match) {
-    rematchBar.style.display = "flex";
+  // 다음 상대 버튼 (찬성측 참여자만)
+  var rematchArea = document.getElementById("rematch-area");
+  if (info.side === "pro" && info.role === "participant") {
+    rematchArea.style.display = "flex";
     var rematchBtn = document.getElementById("rematch-btn");
-    // 기존 이벤트 리스너 제거 후 재등록
-    var newRematchBtn = rematchBtn.cloneNode(true);
-    rematchBtn.parentNode.replaceChild(newRematchBtn, rematchBtn);
-    newRematchBtn.addEventListener("click", function () {
-      var myPayload = allPayloads[info.nickname] || {};
-      var currentCount = myPayload.rematchCount || 0;
-      var newPayload = buildMyPayload(info, myPayload.claim, myPayload.messages, currentCount + 1);
-      info.savePayload(newPayload);
+    rematchBtn.replaceWith(rematchBtn.cloneNode(true));
+    document.getElementById("rematch-btn").addEventListener("click", function () {
+      var cur = allPayloads[info.nickname] || {};
+      var newOffset = (cur.matchOffset || 0) + 1;
+      info.savePayload({
+        celebrityName: myCelebrity,
+        side: info.side,
+        claim: cur.claim || null,
+        messages: cur.messages || [],
+        matchOffset: newOffset
+      });
     });
   } else {
-    rematchBar.style.display = "none";
+    rematchArea.style.display = "none";
+  }
+
+  // 채팅 메시지 (현재 offset의 메시지만 표시)
+  var chatArea = document.getElementById("chat-messages");
+  if (match) {
+    var partnerPayload2 = payloads[match.nickname] || {};
+    var partnerCeleb2 = partnerPayload2.celebrityName || match.nickname;
+    var partnerSide2 = partnerPayload2.side || match.side;
+    var myMsgs = (myPayload.messages || []).filter(function (m) {
+      return (m.matchOffset || 0) === currentMatchOffset;
+    });
+    var partnerMsgs = (partnerPayload2.messages || []).filter(function (m) {
+      return (m.matchOffset || 0) === currentMatchOffset;
+    });
+    var merged = mergeMessages(
+      myMsgs, partnerMsgs,
+      info.nickname, match.nickname,
+      myCelebrity, partnerCeleb2,
+      info.side, partnerSide2
+    );
+    renderMessages(chatArea, merged, info.nickname);
+  } else {
+    chatArea.innerHTML = '<p class="chat-empty">매칭 후 채팅을 시작할 수 있습니다.</p>';
   }
 
   // 채팅 입력
@@ -482,14 +463,10 @@ function setupChatInput(info, payloads, match) {
   var sendBtn = document.getElementById("chat-send-btn");
   var chatInput = document.getElementById("chat-input");
 
-  if (!match || info.role !== "participant" || info.status !== "active" || isReadOnly(info)) {
+  if (!match || info.role !== "participant" || info.status !== "active") {
     inputArea.style.display = match ? "flex" : "none";
     if (sendBtn) sendBtn.disabled = true;
-    if (chatInput) {
-      chatInput.disabled = true;
-      if (viewOnlyMode) chatInput.placeholder = "토론이 마감되어 읽기 전용입니다";
-      else if (isViewer(info)) chatInput.placeholder = "읽기 전용 계정입니다";
-    }
+    if (chatInput) chatInput.disabled = true;
     return;
   }
 
@@ -514,15 +491,20 @@ function setupChatInput(info, payloads, match) {
 
     var myPayload = allPayloads[info.nickname] || {};
     var messages = (myPayload.messages || []).slice();
-    messages.push({ text: text, timestamp: Date.now() });
 
-    var newPayload = buildMyPayload(info, myPayload.claim, messages, myPayload.rematchCount);
-    // 즉시 비워서 onPayloadsChange 재렌더 시 값이 유지되지 않도록
-    newChatInput.value = "";
+    // 메시지에 현재 매칭 라운드 offset 태그
+    var msgMatchOffset;
+    if (info.side === "pro") {
+      msgMatchOffset = myPayload.matchOffset || 0;
+    } else {
+      var curMatch = findMyMatch(info, allPayloads);
+      msgMatchOffset = curMatch ? ((allPayloads[curMatch.nickname] || {}).matchOffset || 0) : 0;
+    }
+    messages.push({ text: text, timestamp: Date.now(), matchOffset: msgMatchOffset });
+
+    var newPayload = buildMyPayload(info, myPayload.claim, messages);
     info.savePayload(newPayload).then(function () {
-      var current = document.getElementById("chat-input");
-      if (current) current.value = "";
-      scheduleTypingAfterSend(match);
+      newChatInput.value = "";
     }).catch(function () {
       isSending = false;
       newSendBtn.disabled = false;
@@ -556,39 +538,22 @@ function renderAllChats(info, payloads) {
   }
 
   pairs.forEach(function (pair) {
-    var proPayload = pair.proNick ? (payloads[pair.proNick] || {}) : {};
-    var conPayload = pair.conNick ? (payloads[pair.conNick] || {}) : {};
-    var proCeleb = pair.proNick ? (proPayload.celebrityName || pair.proNick) : "매칭 대기 중";
-    var conCeleb = pair.conNick ? (conPayload.celebrityName || pair.conNick) : "매칭 대기 중";
-
-    var lastTs = lastMessageTimestamp(proPayload, conPayload);
-    var lastLabel = lastTs ? formatRelativeTime(lastTs)
-      : (pair.proNick && pair.conNick ? "아직 대화 없음" : "상대 대기 중");
+    var proPayload = payloads[pair.proNick] || {};
+    var conPayload = payloads[pair.conNick] || {};
+    var proCeleb = proPayload.celebrityName || pair.proNick;
+    var conCeleb = conPayload.celebrityName || pair.conNick;
 
     var item = document.createElement("div");
     item.className = "pair-item";
-    var proWait = !pair.proNick ? " waiting" : "";
-    var conWait = !pair.conNick ? " waiting" : "";
-    var proAvatar = pair.proNick
-      ? renderAvatar(proCeleb)
-      : '<div class="avatar avatar-placeholder"></div>';
-    var conAvatar = pair.conNick
-      ? renderAvatar(conCeleb)
-      : '<div class="avatar avatar-placeholder"></div>';
     item.innerHTML =
       '<div class="pair-names">' +
-      '<span class="pair-avatar' + proWait + '">' + proAvatar + '</span>' +
-      '<span class="pair-name' + proWait + '">' + escapeHtml(proCeleb) + '</span>' +
-      '<span class="side-badge pro' + proWait + '">찬성</span>' +
+      '<span>' + escapeHtml(proCeleb) + '</span>' +
+      '<span class="side-badge pro">찬성</span>' +
       '<span class="pair-vs">vs</span>' +
-      '<span class="pair-avatar' + conWait + '">' + conAvatar + '</span>' +
-      '<span class="pair-name' + conWait + '">' + escapeHtml(conCeleb) + '</span>' +
-      '<span class="side-badge con' + conWait + '">반대</span>' +
+      '<span>' + escapeHtml(conCeleb) + '</span>' +
+      '<span class="side-badge con">반대</span>' +
       '</div>' +
-      '<div class="pair-right">' +
-      '<span class="pair-last-time">' + escapeHtml(lastLabel) + '</span>' +
-      '<span class="pair-arrow">›</span>' +
-      '</div>';
+      '<span class="pair-arrow">›</span>';
 
     item.addEventListener("click", function () {
       openPairChat(pair, payloads, proCeleb, conCeleb);
@@ -597,77 +562,40 @@ function renderAllChats(info, payloads) {
   });
 }
 
-function lastMessageTimestamp(a, b) {
-  var ts = 0;
-  [a, b].forEach(function (p) {
-    var msgs = (p && p.messages) || [];
-    if (msgs.length > 0) {
-      var t = msgs[msgs.length - 1].timestamp || 0;
-      if (t > ts) ts = t;
-    }
-  });
-  return ts || null;
-}
-
-function formatRelativeTime(ts) {
-  var diffMs = Date.now() - ts;
-  if (diffMs < 60000) return "방금 전";
-  var mins = Math.floor(diffMs / 60000);
-  if (mins < 60) return mins + "분 전";
-  var hours = Math.floor(mins / 60);
-  if (hours < 24) return hours + "시간 전";
-  var days = Math.floor(hours / 24);
-  return days + "일 전";
-}
-
 function openPairChat(pair, payloads, proCeleb, conCeleb) {
   var pairsList = document.getElementById("pairs-list");
   var pairChatView = document.getElementById("pair-chat-view");
 
   pairsList.style.display = "none";
   pairChatView.style.display = "flex";
-  pairChatView.style.flex = "1";
-  pairChatView.style.minHeight = "0";
 
   document.getElementById("pair-chat-title").textContent =
     proCeleb + " (찬성) vs " + conCeleb + " (반대)";
 
-  var proPayload = pair.proNick ? (payloads[pair.proNick] || {}) : {};
-  var conPayload = pair.conNick ? (payloads[pair.conNick] || {}) : {};
+  var proPayload = payloads[pair.proNick] || {};
+  var conPayload = payloads[pair.conNick] || {};
+  var pairMatchOffset = proPayload.matchOffset || 0;
+
+  var proMsgs = (proPayload.messages || []).filter(function (m) {
+    return (m.matchOffset || 0) === pairMatchOffset;
+  });
+  var conMsgs = (conPayload.messages || []).filter(function (m) {
+    return (m.matchOffset || 0) === pairMatchOffset;
+  });
 
   var merged = mergeMessages(
-    proPayload.messages || [],
-    conPayload.messages || [],
-    pair.proNick || "__none_pro__",
-    pair.conNick || "__none_con__",
-    proCeleb,
-    conCeleb,
-    "pro",
-    "con"
+    proMsgs, conMsgs,
+    pair.proNick, pair.conNick,
+    proCeleb, conCeleb,
+    "pro", "con"
   );
 
   var chatArea = document.getElementById("pair-chat-messages");
-  var mySide = (myInfo && myInfo.side) || "pro";
-  function posBySide(side) { return side === mySide ? "mine" : "partner"; }
-
-  var claimsHtml = "";
-  if (proPayload.claim) {
-    claimsHtml += renderClaimBubble(proCeleb, "pro", proPayload.claim.text, posBySide("pro"), proPayload.claim.timestamp);
-  }
-  if (conPayload.claim) {
-    claimsHtml += renderClaimBubble(conCeleb, "con", conPayload.claim.text, posBySide("con"), conPayload.claim.timestamp);
-  }
-  if (!pair.proNick || !pair.conNick) {
-    claimsHtml += '<p class="waiting-text">아직 매칭 상대가 없습니다.</p>';
-  }
-
-  var mySideNick = mySide === "pro" ? pair.proNick : pair.conNick;
-  chatArea.innerHTML = claimsHtml + buildMessagesHtml(merged, mySideNick || "__none__");
-  chatArea.scrollTop = chatArea.scrollHeight;
+  renderMessages(chatArea, merged, null); // null = 모두 partner처럼 표시
 
   document.getElementById("back-btn").onclick = function () {
     pairChatView.style.display = "none";
-    pairsList.style.display = "flex";
+    pairsList.style.display = "block";
   };
 }
 
@@ -682,34 +610,22 @@ function buildAllPairs(payloads) {
   Object.keys(payloads).forEach(function (nick) {
     var p = payloads[nick];
     if (!p || !p.claim || !p.side) return;
-    if (p.side === "pro") pros.push({ nickname: nick, timestamp: p.claim.timestamp, side: "pro", rematchCount: p.rematchCount || 0 });
+    if (p.side === "pro") pros.push({ nickname: nick, timestamp: p.claim.timestamp, side: "pro" });
     else cons.push({ nickname: nick, timestamp: p.claim.timestamp, side: "con" });
   });
 
   pros.sort(function (a, b) { return a.timestamp - b.timestamp; });
   cons.sort(function (a, b) { return a.timestamp - b.timestamp; });
 
+  if (cons.length === 0) return [];
+
   var pairs = [];
-  var matchedConNicks = {};
-
-  // 찬성 유저별로 rematchCount를 이용해 매칭
   for (var i = 0; i < pros.length; i++) {
-    var conNick = null;
-    if (cons.length > 0) {
-      var conIndex = (i + pros[i].rematchCount) % cons.length;
-      conNick = cons[conIndex].nickname;
-    }
-    pairs.push({ proNick: pros[i].nickname, conNick: conNick });
-    if (conNick) matchedConNicks[conNick] = true;
+    var proPayload = payloads[pros[i].nickname] || {};
+    var matchOffset = proPayload.matchOffset || 0;
+    var conIndex = (i + matchOffset) % cons.length;
+    pairs.push({ proNick: pros[i].nickname, conNick: cons[conIndex].nickname });
   }
-
-  // 아무 찬성과도 매칭되지 않은 반대 유저는 별도 항목으로 추가
-  for (var j = 0; j < cons.length; j++) {
-    if (!matchedConNicks[cons[j].nickname]) {
-      pairs.push({ proNick: null, conNick: cons[j].nickname });
-    }
-  }
-
   return pairs;
 }
 
@@ -720,7 +636,7 @@ function findMyMatch(info, payloads) {
   Object.keys(payloads).forEach(function (nick) {
     var p = payloads[nick];
     if (!p || !p.claim || !p.side) return;
-    if (p.side === "pro") pros.push({ nickname: nick, timestamp: p.claim.timestamp, side: "pro", rematchCount: p.rematchCount || 0 });
+    if (p.side === "pro") pros.push({ nickname: nick, timestamp: p.claim.timestamp, side: "pro" });
     else cons.push({ nickname: nick, timestamp: p.claim.timestamp, side: "con" });
   });
 
@@ -728,24 +644,25 @@ function findMyMatch(info, payloads) {
   cons.sort(function (a, b) { return a.timestamp - b.timestamp; });
 
   if (info.side === "pro") {
-    // 내 인덱스 찾기
-    var myIndex = -1;
+    var myProIndex = -1;
     for (var i = 0; i < pros.length; i++) {
-      if (pros[i].nickname === info.nickname) { myIndex = i; break; }
+      if (pros[i].nickname === info.nickname) { myProIndex = i; break; }
     }
-    if (myIndex === -1 || cons.length === 0) return null;
-    var conIndex = (myIndex + pros[myIndex].rematchCount) % cons.length;
-    return cons[conIndex];
+    if (myProIndex === -1 || cons.length === 0) return null;
+    var myPayload = payloads[info.nickname] || {};
+    var matchOffset = myPayload.matchOffset || 0;
+    return cons[(myProIndex + matchOffset) % cons.length];
   } else {
-    // 반대 유저: 나를 현재 가리키고 있는 찬성 유저를 찾음
+    // 반대측: 자신을 현재 가리키고 있는 찬성측을 역으로 찾음
     var myConIndex = -1;
     for (var j = 0; j < cons.length; j++) {
       if (cons[j].nickname === info.nickname) { myConIndex = j; break; }
     }
-    if (myConIndex === -1) return null;
+    if (myConIndex === -1 || pros.length === 0) return null;
     for (var k = 0; k < pros.length; k++) {
-      var targetConIndex = (k + pros[k].rematchCount) % cons.length;
-      if (targetConIndex === myConIndex) return pros[k];
+      var proPayload = payloads[pros[k].nickname] || {};
+      var proOffset = proPayload.matchOffset || 0;
+      if ((k + proOffset) % cons.length === myConIndex) return pros[k];
     }
     return null;
   }
@@ -767,49 +684,18 @@ function mergeMessages(msgsA, msgsB, nickA, nickB, celebA, celebB, sideA, sideB)
   return all;
 }
 
-function renderClaimBubble(celeb, side, text, position, timestamp) {
+function renderClaimBubble(celeb, side, text, position) {
   var sideLabel = side === "pro" ? "찬성" : "반대";
-  var avatar = renderAvatar(celeb);
-  var timeBlock = timestamp
-    ? '<div class="msg-time">' + formatTime(timestamp) + '</div>'
-    : '';
-  var body =
-    '<div class="msg-body">' +
+  return (
+    '<div class="claim-bubble-row ' + position + '">' +
     '<div class="msg-sender">' +
+    '<span class="claim-label">첫 주장</span>' +
     escapeHtml(celeb) +
     '<span class="side-badge ' + side + '">' + sideLabel + '</span>' +
     '</div>' +
     '<div class="msg-bubble ' + side + '">' + escapeHtml(text) + '</div>' +
-    timeBlock +
-    '</div>';
-  return (
-    '<div class="msg-row ' + position + '">' +
-    (position === "mine" ? (body + avatar) : (avatar + body)) +
     '</div>'
   );
-}
-
-function buildMessagesHtml(messages, myNickname) {
-  return messages.map(function (m) {
-    var isMe = myNickname && m.nickname === myNickname;
-    var rowClass = isMe ? "mine" : "partner";
-    var timeStr = formatTime(m.timestamp);
-    var avatar = renderAvatar(m.celeb);
-    var body =
-      '<div class="msg-body">' +
-      '<div class="msg-sender">' +
-      escapeHtml(m.celeb) +
-      '<span class="side-badge ' + m.side + '">' + (m.side === "pro" ? "찬성" : "반대") + '</span>' +
-      '</div>' +
-      '<div class="msg-bubble ' + m.side + '">' + escapeHtml(m.text) + '</div>' +
-      '<div class="msg-time">' + timeStr + '</div>' +
-      '</div>';
-    return (
-      '<div class="msg-row ' + rowClass + '">' +
-      (isMe ? (body + avatar) : (avatar + body)) +
-      '</div>'
-    );
-  }).join("");
 }
 
 function renderMessages(container, messages, myNickname) {
@@ -817,122 +703,25 @@ function renderMessages(container, messages, myNickname) {
     container.innerHTML = '<p class="chat-empty">아직 채팅이 없습니다.</p>';
     return;
   }
-  container.innerHTML = buildMessagesHtml(messages, myNickname);
+
+  container.innerHTML = messages.map(function (m) {
+    var isMe = myNickname && m.nickname === myNickname;
+    var rowClass = isMe ? "mine" : "partner";
+    var timeStr = formatTime(m.timestamp);
+    return (
+      '<div class="msg-row ' + rowClass + '">' +
+      '<div class="msg-sender">' +
+      escapeHtml(m.celeb) +
+      '<span class="side-badge ' + m.side + '">' + (m.side === "pro" ? "찬성" : "반대") + '</span>' +
+      '</div>' +
+      '<div class="msg-bubble ' + m.side + '">' + escapeHtml(m.text) + '</div>' +
+      '<div class="msg-time">' + timeStr + '</div>' +
+      '</div>'
+    );
+  }).join("");
+
+  // 스크롤 맨 아래로
   container.scrollTop = container.scrollHeight;
-}
-
-// ───────────────────────────────
-// 아바타 (이니셜 + 색상 + 온라인 dot)
-// ───────────────────────────────
-
-var CELEBRITY_IMAGES = {
-  "최미나수": "images/01.jpg",
-  "지드래곤": "images/02.jpg",
-  "제니": "images/03.jpg",
-  "이재용": "images/04.jpg",
-  "카리나": "images/05.jpg",
-  "차은우": "images/06.jpg",
-  "티모시 샬라메": "images/07.jpg",
-  "박서준": "images/08.jpg",
-  "킴 카다시안": "images/09.jpg",
-  "한소희": "images/10.jpg",
-  "카디비": "images/11.jpg",
-  "장원영": "images/12.jpg",
-  "안유진": "images/13.jpg",
-  "이수만": "images/14.jpg",
-  "민희진": "images/15.jpg",
-  "태연": "images/16.jpg",
-  "백현": "images/17.jpg",
-  "방시혁": "images/18.jpg",
-  "이도현": "images/19.jpg",
-  "변우석": "images/20.jpg",
-  "레이디 가가": "images/21.jpg",
-  "박보검": "images/22.jpg",
-  "수지": "images/23.jpg",
-  "로제": "images/24.jpg",
-  "비욘세": "images/25.jpg"
-};
-
-function renderAvatar(name) {
-  var img = CELEBRITY_IMAGES[name];
-  var color = avatarColor(name || "");
-  var inner;
-  if (img) {
-    inner = '<img class="avatar-img" src="' + encodeURI(img) + '" alt="' + escapeHtml(name) + '">';
-  } else {
-    var initial = (name || "?").trim().charAt(0) || "?";
-    inner = '<span class="avatar-initial">' + escapeHtml(initial) + '</span>';
-  }
-  return (
-    '<div class="avatar"' + (img ? '' : ' style="background:' + color + '"') + '>' +
-    inner +
-    '<span class="avatar-dot"></span>' +
-    '</div>'
-  );
-}
-
-function avatarColor(seed) {
-  var h = 0;
-  for (var i = 0; i < seed.length; i++) {
-    h = (h * 31 + seed.charCodeAt(i)) >>> 0;
-  }
-  var hue = h % 360;
-  return 'hsl(' + hue + ', 55%, 62%)';
-}
-
-// ───────────────────────────────
-// 타이핑 연출
-// ───────────────────────────────
-
-var typingShowTimeout = null;
-var typingHideTimeout = null;
-var typingActive = false;
-
-function showPartnerTyping(container, partnerCeleb, partnerSide) {
-  if (!container || !partnerCeleb) return;
-  hidePartnerTyping(container);
-
-  var row = document.createElement("div");
-  row.className = "msg-row partner typing-row";
-  row.id = "typing-indicator";
-  row.innerHTML =
-    renderAvatar(partnerCeleb) +
-    '<div class="msg-body">' +
-    '<div class="msg-sender">' + escapeHtml(partnerCeleb) +
-    '<span class="side-badge ' + partnerSide + '">' + (partnerSide === "pro" ? "찬성" : "반대") + '</span>' +
-    '</div>' +
-    '<div class="msg-bubble ' + partnerSide + ' typing-bubble">' +
-    '<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>' +
-    '</div>' +
-    '</div>';
-  container.appendChild(row);
-  container.scrollTop = container.scrollHeight;
-}
-
-function hidePartnerTyping(container) {
-  var el = container && container.querySelector("#typing-indicator");
-  if (el) el.remove();
-}
-
-function scheduleTypingAfterSend(match) {
-  if (typingShowTimeout) clearTimeout(typingShowTimeout);
-  if (typingHideTimeout) clearTimeout(typingHideTimeout);
-  typingActive = false;
-  hidePartnerTyping(document.getElementById("chat-messages"));
-
-  typingShowTimeout = setTimeout(function () {
-    var container = document.getElementById("chat-messages");
-    var partnerPayload = allPayloads[match.nickname] || {};
-    var partnerCeleb = partnerPayload.celebrityName || match.nickname;
-    var partnerSide = partnerPayload.side || match.side;
-    typingActive = true;
-    showPartnerTyping(container, partnerCeleb, partnerSide);
-
-    typingHideTimeout = setTimeout(function () {
-      typingActive = false;
-      hidePartnerTyping(document.getElementById("chat-messages"));
-    }, 5000);
-  }, 5000);
 }
 
 function formatTime(ts) {
@@ -948,15 +737,15 @@ function formatTime(ts) {
 // 유틸
 // ───────────────────────────────
 
-function buildMyPayload(info, claim, messages, rematchCount) {
+function buildMyPayload(info, claim, messages) {
   var payload = {
     celebrityName: myCelebrity,
     side: info.side,
     claim: claim,
     messages: messages || []
   };
-  if (rematchCount !== undefined && rematchCount !== null) {
-    payload.rematchCount = rematchCount;
+  if (info.side === "pro") {
+    payload.matchOffset = (allPayloads[info.nickname] || {}).matchOffset || 0;
   }
   return payload;
 }
