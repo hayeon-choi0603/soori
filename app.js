@@ -430,9 +430,16 @@ function renderMyChat(info, payloads) {
       partnerCeleb, partnerSide, partnerPayload.claim ? partnerPayload.claim.text : "(주장 없음)",
       "partner", partnerPayload.claim ? partnerPayload.claim.timestamp : null
     );
+    // 현재 상대와 나눈 메시지만 필터링 (재매칭 후 이전 대화 분리)
+    var myFilteredMsgs = (myPayload.messages || []).filter(function(m) {
+      return !m.partnerNick || m.partnerNick === match.nickname;
+    });
+    var partnerFilteredMsgs = (partnerPayload.messages || []).filter(function(m) {
+      return !m.partnerNick || m.partnerNick === info.nickname;
+    });
     var merged = mergeMessages(
-      myPayload.messages || [],
-      partnerPayload.messages || [],
+      myFilteredMsgs,
+      partnerFilteredMsgs,
       info.nickname,
       match.nickname,
       myCelebrity,
@@ -442,7 +449,11 @@ function renderMyChat(info, payloads) {
     );
     messagesHtml = buildMessagesHtml(merged, info.nickname);
   } else {
-    partnerClaimHtml = '<p class="waiting-text">매칭 상대를 찾고 있습니다...</p>';
+    // 반대 참여자가 이전에 대화한 이력이 있으면 재매칭 대기 메시지 표시
+    var hadPrevChat = (myPayload.messages || []).length > 0;
+    partnerClaimHtml = (info.side === "con" && hadPrevChat)
+      ? '<p class="waiting-text">상대방이 다른 매칭 상대를 찾고 있어요. 잠시만 기다려 주세요.</p>'
+      : '<p class="waiting-text">매칭 상대를 찾고 있습니다...</p>';
   }
 
   chatArea.innerHTML = myClaimHtml + partnerClaimHtml + messagesHtml;
@@ -515,7 +526,7 @@ function setupChatInput(info, payloads, match) {
 
     var myPayload = allPayloads[info.nickname] || {};
     var messages = (myPayload.messages || []).slice();
-    messages.push({ text: text, timestamp: Date.now() });
+    messages.push({ text: text, timestamp: Date.now(), partnerNick: match.nickname });
 
     var newPayload = buildMyPayload(info, myPayload.claim, messages, myPayload.rematchCount);
     // 즉시 비워서 onPayloadsChange 재렌더 시 값이 유지되지 않도록
@@ -567,7 +578,7 @@ function renderAllChats(info, payloads) {
       : (pair.proNick && pair.conNick ? "아직 대화 없음" : "상대 대기 중");
 
     var item = document.createElement("div");
-    item.className = "pair-item";
+    item.className = "pair-item" + (pair.isHistorical ? " pair-item-historical" : "");
     var proWait = !pair.proNick ? " waiting" : "";
     var conWait = !pair.conNick ? " waiting" : "";
     var proAvatar = pair.proNick
@@ -587,6 +598,7 @@ function renderAllChats(info, payloads) {
       '<span class="side-badge con' + conWait + '">반대</span>' +
       '</div>' +
       '<div class="pair-right">' +
+      (pair.isHistorical ? '<span class="pair-historical-badge">이전 대화</span>' : '') +
       '<span class="pair-last-time">' + escapeHtml(lastLabel) + '</span>' +
       '<span class="pair-arrow">›</span>' +
       '</div>';
@@ -636,9 +648,16 @@ function openPairChat(pair, payloads, proCeleb, conCeleb) {
   var proPayload = pair.proNick ? (payloads[pair.proNick] || {}) : {};
   var conPayload = pair.conNick ? (payloads[pair.conNick] || {}) : {};
 
+  // 이 페어에 해당하는 메시지만 필터링
+  var proMsgsFiltered = (proPayload.messages || []).filter(function(m) {
+    return !m.partnerNick || m.partnerNick === pair.conNick;
+  });
+  var conMsgsFiltered = (conPayload.messages || []).filter(function(m) {
+    return !m.partnerNick || m.partnerNick === pair.proNick;
+  });
   var merged = mergeMessages(
-    proPayload.messages || [],
-    conPayload.messages || [],
+    proMsgsFiltered,
+    conMsgsFiltered,
     pair.proNick || "__none_pro__",
     pair.conNick || "__none_con__",
     proCeleb,
@@ -710,6 +729,24 @@ function buildAllPairs(payloads) {
       pairs.push({ proNick: null, conNick: cons[j].nickname });
     }
   }
+
+  // 재매칭으로 끊어진 이전 대화 페어도 "다른 사람 채팅"에 표시
+  var currentPairKeys = {};
+  pairs.forEach(function(pair) {
+    if (pair.proNick && pair.conNick) currentPairKeys[pair.proNick + "||" + pair.conNick] = true;
+  });
+  Object.keys(payloads).forEach(function(nick) {
+    var p = payloads[nick];
+    if (!p || p.side !== "pro") return;
+    (p.messages || []).forEach(function(m) {
+      if (!m.partnerNick || !payloads[m.partnerNick]) return;
+      var key = nick + "||" + m.partnerNick;
+      if (!currentPairKeys[key]) {
+        currentPairKeys[key] = true;
+        pairs.push({ proNick: nick, conNick: m.partnerNick, isHistorical: true });
+      }
+    });
+  });
 
   return pairs;
 }
