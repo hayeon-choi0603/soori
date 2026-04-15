@@ -623,6 +623,20 @@ textarea:focus {
   white-space: nowrap;
 }
 
+.pair-item-historical {
+  background: #fafafa;
+  opacity: 0.8;
+}
+
+.pair-historical-badge {
+  font-size: 0.68rem;
+  color: #aaa;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+  white-space: nowrap;
+}
+
 .pair-vs {
   font-size: 0.75rem;
   color: #bbb;
